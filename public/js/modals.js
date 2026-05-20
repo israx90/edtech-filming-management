@@ -1001,7 +1001,22 @@ const Modals = {
 
             message = `Hola ${teacherName}, ${greeting.toLowerCase()}. Soy ${myName} del Estudio de Filmación EDTECH. Le recordamos que tiene agendada una sesión de grabación para la materia ${subject} en ${sede} ${sessionText}. ¡Le esperamos!`;
         } else if (templateId === 'esperando') {
-            message = `Hola ${teacherName}, ${greeting.toLowerCase()}. Soy ${myName}, encargad@ de la filmación para el día de hoy de la materia ${subject}. L@ estamos esperando en el estudio de ${sede}.`;
+            // Inferencia de género básica para nombres en español
+            const inferGender = (name) => {
+                if (!name) return 'm';
+                const first = name.trim().split(' ')[0].toLowerCase();
+                if (['jose', 'josé', 'rene', 'rené', 'noel', 'israx'].includes(first)) return 'm';
+                if (['carmen', 'isabel', 'luz', 'paz', 'sol', 'ruth', 'noemi', 'judith', 'miriam', 'liz', 'mar'].includes(first)) return 'f';
+                return first.endsWith('a') ? 'f' : 'm';
+            };
+            
+            const myGender = inferGender(myName);
+            const teacherGender = inferGender(teacherName);
+            
+            const encargadx = myGender === 'f' ? 'encargada' : 'encargado';
+            const lox = teacherGender === 'f' ? 'La' : 'Lo';
+
+            message = `Hola ${teacherName}, ${greeting.toLowerCase()}. Soy ${myName}, ${encargadx} de la filmación para el día de hoy de la materia ${subject}. ${lox} estamos esperando en el estudio de ${sede}.`;
         }
 
         const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
