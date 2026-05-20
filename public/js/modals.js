@@ -985,6 +985,20 @@ const Modals = {
     },
 
     async markComplete() {
+        if (!this.currentAssignmentId) return;
+        Calendar.showConfirm({
+            title: 'Completar Filmación',
+            message: '¿Marcar esta filmación como completada?',
+            okLabel: 'Completar'
+        }, async () => {
+            await API.put(`/assignments/${this.currentAssignmentId}`, { status: 'completed' });
+            showToast('Filmación marcada como completada', 'success');
+            this.closeAll();
+            Calendar.render();
+            Dashboard.refresh();
+            if (App.currentView === 'goals') Goals.refresh();
+        });
+    },
 
     // ===== ADD SESSION (to existing) =====
 
