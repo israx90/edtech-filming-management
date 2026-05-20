@@ -216,129 +216,145 @@ const PendingTeachers = {
         }
 
         let html = '';
+        
+        // Grouping logic
+        const groups = {};
         for (const t of teachers) {
-            const isExt = t.is_external;
-            const status = t.status || 'pending';
-            const statusInfo = TEACHER_STATUS[status] || TEACHER_STATUS.pending;
+            const st = t.status || 'pending';
+            if (!groups[st]) groups[st] = [];
+            groups[st].push(t);
+        }
 
-            const cardClass = `pt-card${isExt ? ' pt-external' : ''}${status === 'unavailable' ? ' pt-unavailable-card' : ''}`;
+        // Define order for status groups
+        const statusOrder = ['pending', 'contacted', 'scheduled', 'guion_revisado', 'guion_incompleto', 'unavailable'];
 
-            const sedeIcon = isExt
-                ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`
-                : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
+        for (const st of statusOrder) {
+            if (!groups[st] || groups[st].length === 0) continue;
+            
+            const statusInfo = TEACHER_STATUS[st] || TEACHER_STATUS.pending;
+            
+            // Add group header
+            html += `<div class="pending-group-header">
+                ${statusInfo.label} <span>${groups[st].length}</span>
+            </div>`;
 
-            const phoneDisplay = t.phone
-                ? (() => {
-                    const cleanPhone = t.phone.replace(/[^0-9]/g, '');
-                    const greeting = encodeURIComponent(`Hola ${t.name}, le escribimos del Estudio de Filmación EDTECH respecto a la materia ${t.subject_code || ''} ${t.subject}. ¿Podríamos coordinar su grabación?`);
-                    return `<a href="https://wa.me/${cleanPhone}?text=${greeting}" target="_blank" class="pt-phone-link" title="Abrir en WhatsApp">${t.phone}</a>`;
-                })()
-                : '<span class="pt-no-phone">Sin número</span>';
+            for (const t of groups[st]) {
+                const isExt = t.is_external;
+                const status = t.status || 'pending';
 
-            const _createdDate = new Date(t.created_at);
-            const _now = new Date();
-            const _diffMs = _now - _createdDate;
-            const _diffDays = Math.floor(_diffMs / (1000 * 60 * 60 * 24));
-            const _dateFormatted = _createdDate.toLocaleDateString('es-BO', { day: '2-digit', month: 'short' });
-            const dateCreated = _diffDays === 0
-                ? `${_dateFormatted} · <span class="pt-days-badge pt-days-today">Hoy</span>`
-                : _diffDays === 1
-                    ? `${_dateFormatted} · <span class="pt-days-badge pt-days-1">Pasó 1 día</span>`
-                    : _diffDays <= 3
-                        ? `${_dateFormatted} · <span class="pt-days-badge pt-days-low">Pasaron ${_diffDays} días</span>`
-                        : _diffDays <= 6
-                            ? `${_dateFormatted} · <span class="pt-days-badge pt-days-mid">Pasaron ${_diffDays} días</span>`
-                            : `${_dateFormatted} · <span class="pt-days-badge pt-days-high">Pasaron ${_diffDays} días</span>`;
+                const cardClass = `pt-card${isExt ? ' pt-external' : ''}${status === 'unavailable' ? ' pt-unavailable-card' : ''}`;
 
-            const typeColors = {
-                'Teórica':   { bg: 'rgba(96,165,250,0.15)', color: '#60a5fa' },
-                'Numérica':  { bg: 'rgba(52,211,153,0.15)', color: '#34d399' },
-                'Proyecto Integrador': { bg: 'rgba(167,139,250,0.15)', color: '#a78bfa' }
-            };
-            const tc = typeColors[t.subject_type] || typeColors['Teórica'];
+                const sedeIcon = isExt
+                    ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`
+                    : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
 
-            // Status badge
-            const statusBadge = `<span class="pt-status-badge" style="background:${statusInfo.bg};color:${statusInfo.color};font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;white-space:nowrap;">${statusInfo.label}</span>`;
+                const phoneDisplay = t.phone
+                    ? (() => {
+                        const cleanPhone = t.phone.replace(/[^0-9]/g, '');
+                        const greeting = encodeURIComponent(`Hola ${t.name}, le escribimos del Estudio de Filmación EDTECH respecto a la materia ${t.subject_code || ''} ${t.subject}. ¿Podríamos coordinar su grabación?`);
+                        return `<a href="https://wa.me/${cleanPhone}?text=${greeting}" target="_blank" class="pt-phone-link" title="Abrir en WhatsApp">${t.phone}</a>`;
+                    })()
+                    : '<span class="pt-no-phone">Sin número</span>';
 
-            // Action buttons based on role
-            const canEdit = App.user && (App.user.role !== 'academica' || t.added_by_user_id === App.user.id);
-            const canManage = App.user && ['admin', 'post_productor'].includes(App.user.role);
-            const canViewComments = !!App.user; // ALL roles can see the comment thread
+                const _createdDate = new Date(t.created_at);
+                const _now = new Date();
+                const _diffMs = _now - _createdDate;
+                const _diffDays = Math.floor(_diffMs / (1000 * 60 * 60 * 24));
+                const _dateFormatted = _createdDate.toLocaleDateString('es-BO', { day: '2-digit', month: 'short' });
+                const dateCreated = _diffDays === 0
+                    ? `${_dateFormatted} · <span class="pt-days-badge pt-days-today">Hoy</span>`
+                    : _diffDays === 1
+                        ? `${_dateFormatted} · <span class="pt-days-badge pt-days-1">Pasó 1 día</span>`
+                        : _diffDays <= 3
+                            ? `${_dateFormatted} · <span class="pt-days-badge pt-days-low">Pasaron ${_diffDays} días</span>`
+                            : _diffDays <= 6
+                                ? `${_dateFormatted} · <span class="pt-days-badge pt-days-mid">Pasaron ${_diffDays} días</span>`
+                                : `${_dateFormatted} · <span class="pt-days-badge pt-days-high">Pasaron ${_diffDays} días</span>`;
 
-            let actionsHtml = '';
-            if (canEdit || canManage || canViewComments) {
-                actionsHtml = `<div class="pt-actions">`;
+                const typeColors = {
+                    'Teórica':   { bg: 'rgba(96,165,250,0.15)', color: '#60a5fa' },
+                    'Numérica':  { bg: 'rgba(52,211,153,0.15)', color: '#34d399' },
+                    'Proyecto Integrador': { bg: 'rgba(167,139,250,0.15)', color: '#a78bfa' }
+                };
+                const tc = typeColors[t.subject_type] || typeColors['Teórica'];
 
-                // Status selector (dropdown)
-                if (canManage) {
-                    actionsHtml += `<select class="input select pt-status-select" data-id="${t.id}" style="font-size:11px;padding:3px 8px;max-width:160px;height:28px;" title="Cambiar estado">
-                        <option value="pending"          ${status === 'pending'          ? 'selected' : ''}>Pendiente</option>
-                        <option value="contacted"         ${status === 'contacted'         ? 'selected' : ''}>Contactado</option>
-                        <option value="scheduled"         ${status === 'scheduled'         ? 'selected' : ''}>Agendado</option>
-                        <option value="unavailable"       ${status === 'unavailable'       ? 'selected' : ''}>No Disponible</option>
-                        <option value="guion_revisado"    ${status === 'guion_revisado'    ? 'selected' : ''}>Guión Terminado</option>
-                        <option value="guion_incompleto"  ${status === 'guion_incompleto'  ? 'selected' : ''}>Guión Incompleto</option>
-                    </select>`;
+                // Action buttons based on role
+                const canEdit = App.user && (App.user.role !== 'academica' || t.added_by_user_id === App.user.id);
+                const canManage = App.user && ['admin', 'post_productor'].includes(App.user.role);
+                const canViewComments = !!App.user;
+
+                let actionsHtml = '';
+                if (canEdit || canManage || canViewComments) {
+                    actionsHtml = `<div class="pt-actions">`;
+
+                    if (canManage) {
+                        actionsHtml += `<select class="input select pt-status-select" data-id="${t.id}" style="font-size:11px;padding:3px 8px;height:28px;" title="Cambiar estado">
+                            <option value="pending"          ${status === 'pending'          ? 'selected' : ''}>Pendiente</option>
+                            <option value="contacted"         ${status === 'contacted'         ? 'selected' : ''}>Contactado</option>
+                            <option value="scheduled"         ${status === 'scheduled'         ? 'selected' : ''}>Agendado</option>
+                            <option value="unavailable"       ${status === 'unavailable'       ? 'selected' : ''}>No Disponible</option>
+                            <option value="guion_revisado"    ${status === 'guion_revisado'    ? 'selected' : ''}>Guión Terminado</option>
+                            <option value="guion_incompleto"  ${status === 'guion_incompleto'  ? 'selected' : ''}>Guión Incompleto</option>
+                        </select>`;
+                    }
+
+                    if (canManage && (status === 'pending' || status === 'contacted')) {
+                        actionsHtml += `<button class="btn-sm btn-success" onclick="PendingTeachers.scheduleFromAgenda(${t.id})" title="Crear filmación" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            Agendar
+                        </button>`;
+                    }
+
+                    if (canViewComments) {
+                        actionsHtml += `<button class="btn-sm btn-outline pt-comment-btn" data-id="${t.id}" title="Ver notas y comentarios" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            Notas
+                        </button>`;
+                    }
+
+                    if (canEdit) {
+                        actionsHtml += `<button class="btn-icon" onclick="PendingTeachers.editTeacher(${t.id})" title="Editar">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                        </button>`;
+                    }
+
+                    if (canManage) {
+                        actionsHtml += `<button class="btn-icon" onclick="PendingTeachers.deleteTeacher(${t.id})" title="Eliminar">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>`;
+                    }
+
+                    actionsHtml += `</div>`;
                 }
 
-                // Schedule button (only for pending/contacted)
-                if (canManage && (status === 'pending' || status === 'contacted')) {
-                    actionsHtml += `<button class="btn-sm btn-success" onclick="PendingTeachers.scheduleFromAgenda(${t.id})" title="Crear filmación con estos datos" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        Agendar
-                    </button>`;
-                }
+                const alarmIndicator = status === 'guion_incompleto' 
+                    ? `<span class="pt-alarm-indicator" title="Falta información para agendar"><span class="pt-alarm-dot"></span></span>`
+                    : '';
 
-                // Comment thread button — visible to ALL roles
-                if (canViewComments) {
-                    actionsHtml += `<button class="btn-sm btn-outline pt-comment-btn" data-id="${t.id}" title="Ver notas y comentarios" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        Notas
-                    </button>`;
-                }
-
-                // Edit
-                if (canEdit) {
-                    actionsHtml += `<button class="btn-icon" onclick="PendingTeachers.editTeacher(${t.id})" title="Editar">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-                    </button>`;
-                }
-
-                // Delete
-                if (canManage) {
-                    actionsHtml += `<button class="btn-icon" onclick="PendingTeachers.deleteTeacher(${t.id})" title="Eliminar">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    </button>`;
-                }
-
-                actionsHtml += `</div>`;
-            }
-
-            const alarmIndicator = status === 'guion_incompleto' 
-                ? `<span class="pt-alarm-indicator" title="Falta información para agendar"><span class="pt-alarm-dot"></span></span>`
-                : '';
-
-            html += `<div class="${cardClass}" data-id="${t.id}">
-                <div class="pt-card-main">
-                    <div class="pt-avatar">${t.name.charAt(0).toUpperCase()}</div>
-                    <div class="pt-info">
-                        <div class="pt-name">${t.name} ${alarmIndicator}</div>
-                        <div class="pt-subject">
-                            ${t.subject_code ? `<span class="pt-subject-code">${t.subject_code}</span> ` : ''}${t.subject}
-                            ${t.subject_type ? `<span class="ext-tag" style="background:${tc.bg};color:${tc.color};font-weight:600;">${t.subject_type}</span>` : ''}
+                html += `<div class="${cardClass}" data-id="${t.id}">
+                    <div class="pt-card-main">
+                        <div class="pt-card-top">
+                            <div class="pt-avatar">${t.name.charAt(0).toUpperCase()}</div>
+                            <div class="pt-info">
+                                <div class="pt-name">${t.name} ${alarmIndicator}</div>
+                                <div class="pt-subject">
+                                    ${t.subject_code ? `<span class="pt-subject-code">${t.subject_code}</span> ` : ''}${t.subject}
+                                    ${t.subject_type ? `<span class="ext-tag" style="background:${tc.bg};color:${tc.color};font-weight:600;">${t.subject_type}</span>` : ''}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="pt-meta">
-                        ${statusBadge}
-                        <div class="pt-sede-badge ${isExt ? 'sede-external' : ''}">
-                            ${sedeIcon}
-                            <span>${t.sede}</span>
-                            ${isExt ? '<span class="ext-tag">EXTERNO</span>' : ''}
+                        <div class="pt-meta" style="flex-direction:row; align-items:center; width:100%; justify-content:space-between; flex-wrap:wrap;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <div class="pt-sede-badge ${isExt ? 'sede-external' : ''}">
+                                    ${sedeIcon}
+                                    <span>${t.sede}</span>
+                                    ${isExt ? '<span class="ext-tag">EXTERNO</span>' : ''}
+                                </div>
+                                <div class="pt-phone">${phoneDisplay}</div>
+                            </div>
                         </div>
-                        <div class="pt-phone">${phoneDisplay}</div>
+                        ${actionsHtml}
                     </div>
-                    ${actionsHtml}
-                </div>
                 ${t.notes ? `<div class="pt-notes">${t.notes}</div>` : ''}
                 <div class="pt-date">
                     ${t.added_by_name ? `<span class="pt-added-by">Añadido por <strong>${t.added_by_name}</strong> · </span>` : ''}${dateCreated}

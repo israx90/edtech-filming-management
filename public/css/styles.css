@@ -666,8 +666,31 @@ input[type="time"]:hover { background-image: url("data:image/svg+xml,%3Csvg xmln
 }
 
 /* Pending List */
-.pending-list { display: flex; flex-direction: column; gap: 8px; }
-
+.pending-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+    align-items: start;
+}
+.pending-group-header {
+    grid-column: 1 / -1;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    padding: 16px 0 4px 0;
+    border-bottom: 1px solid var(--border-light);
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pending-group-header span {
+    font-size: 11px;
+    background: var(--bg-elevated);
+    padding: 2px 8px;
+    border-radius: 12px;
+    color: var(--text-muted);
+}
 /* Teacher Card */
 .pt-card {
     background: var(--bg-card);
@@ -682,7 +705,10 @@ input[type="time"]:hover { background-image: url("data:image/svg+xml,%3Csvg xmln
 
 
 .pt-card-main {
-    display: flex; align-items: center; gap: 12px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
+}
+.pt-card-top {
+    display: flex; align-items: center; gap: 12px; width: 100%;
 }
 
 .pt-avatar {
@@ -754,8 +780,9 @@ input[type="time"]:hover { background-image: url("data:image/svg+xml,%3Csvg xmln
 .pt-phone-link:hover { color: var(--accent); text-decoration: underline; }
 .pt-no-phone { color: var(--text-muted); font-style: italic; }
 
-.pt-actions { display: flex; gap: 4px; flex-shrink: 0; margin-left: 8px; }
+.pt-actions { display: flex; gap: 4px; width: 100%; margin-top: 8px; justify-content: flex-end; }
 .pt-actions .btn-icon { width: 30px; height: 30px; }
+.pt-actions .pt-status-select { flex: 1; min-width: 0; }
 
 .pt-btn-resolve { color: var(--green) !important; }
 .pt-btn-resolve:hover { background: var(--green-bg) !important; }
