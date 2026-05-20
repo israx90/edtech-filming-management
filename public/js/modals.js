@@ -850,16 +850,7 @@ const Modals = {
         if (canEdit) {
             html += `<div class="divider"></div>
             <div class="detail-edit-row">
-                <label style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap;">Guión:</label>
-                <select class="input select" onchange="Modals.updateAssignmentField('script_status', this.value)" style="max-width:240px;">
-                    <option value="not_uploaded" ${data.script_status==='not_uploaded'?'selected':''}>Sin Guión</option>
-                    <option value="guion_pendiente" ${data.script_status==='guion_pendiente'?'selected':''}>GUION PENDIENTE</option>
-                    <option value="uploaded_hito_v" ${data.script_status==='uploaded_hito_v'?'selected':''}>Cargado (Hito V)</option>
-                    <option value="pending_review" ${data.script_status==='pending_review'?'selected':''}>Pendiente de Revisión</option>
-                    <option value="in_review" ${data.script_status==='in_review'?'selected':''}>En Revisión</option>
-                    <option value="needs_corrections" ${data.script_status==='needs_corrections'?'selected':''}>Requiere Correcciones</option>
-                    <option value="approved" ${data.script_status==='approved'?'selected':''}>Revisado ✓</option>
-                </select>
+                <label style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap;">Link del Guión:</label>
                 <input type="url" class="input" placeholder="Link de Drive" value="${data.drive_link || ''}" onchange="Modals.updateAssignmentField('drive_link', this.value)" style="max-width:300px;">
             </div>
             ${whatsappHtml}`;
