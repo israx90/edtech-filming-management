@@ -84,6 +84,7 @@ if ($method === 'PUT' && preg_match('|^/assignments/(?P<id>\d+)$|', $path, $m)) 
     $status = getBody('status');
     $sede = getBody('sede');
     $flight_ticket_path = getBody('flight_ticket_path');
+    $assigned_staff = getBody('assigned_staff');
     
     if ($teacher_name !== null) execute('UPDATE filming_assignments SET teacher_name = ? WHERE id = ?', [$teacher_name, $id]);
     if ($phone !== null) execute('UPDATE filming_assignments SET phone = ? WHERE id = ?', [$phone, $id]);
@@ -91,6 +92,7 @@ if ($method === 'PUT' && preg_match('|^/assignments/(?P<id>\d+)$|', $path, $m)) 
     if ($script_status !== null) execute('UPDATE filming_assignments SET script_status = ? WHERE id = ?', [$script_status, $id]);
     if ($sede !== null) execute('UPDATE filming_assignments SET sede = ? WHERE id = ?', [$sede, $id]);
     if ($flight_ticket_path !== null) execute('UPDATE filming_assignments SET flight_ticket_path = ? WHERE id = ?', [$flight_ticket_path, $id]);
+    if ($assigned_staff !== null) execute('UPDATE filming_assignments SET assigned_staff = ? WHERE id = ?', [$assigned_staff, $id]);
     if ($status !== null) {
         execute('UPDATE filming_assignments SET status = ? WHERE id = ?', [$status, $id]);
         if ($status === 'completed') {

@@ -22,7 +22,8 @@ $statements = [
     
     "ALTER TABLE filming_assignments ADD COLUMN sede VARCHAR(100) DEFAULT 'La Paz'",
     "ALTER TABLE filming_assignments ADD COLUMN flight_ticket_path VARCHAR(255) NULL",
-    "ALTER TABLE pending_teachers ADD COLUMN flight_ticket_path VARCHAR(255) NULL"
+    "ALTER TABLE pending_teachers ADD COLUMN flight_ticket_path VARCHAR(255) NULL",
+    "ALTER TABLE filming_assignments ADD COLUMN assigned_staff TEXT NULL"
 ];
 ?>
 <!DOCTYPE html>

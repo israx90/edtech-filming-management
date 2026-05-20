@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS filming_assignments (
     sede VARCHAR(100) DEFAULT 'La Paz',
     flight_ticket_path VARCHAR(255) NULL,
     last_hito_reached ENUM('pagina_inicio', 'hito_2', 'hito_3', 'hito_4', 'hito_5', 'semanas') NULL,
+    assigned_staff TEXT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
 );

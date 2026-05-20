@@ -847,6 +847,15 @@ const Modals = {
         // Edit section — editable for admin/post, read-only for academica
         if (canEdit) {
             html += `<div class="divider"></div>
+            <div class="detail-edit-row" style="align-items:flex-start;">
+                <label style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap;margin-top:8px;">Personas Adicionales</label>
+                <div style="flex:1;">
+                    <div id="assignment-attendees-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+                    <button class="btn-sm btn-outline" onclick="Modals.addAssignmentAttendeeField()" type="button">+ Añadir</button>
+                    <button class="btn-sm btn-success" onclick="Modals.saveAssignmentAttendees()" style="margin-left:6px; display:none;" id="btn-save-assignment-attendees">Guardar Personas</button>
+                </div>
+            </div>
+            <div class="divider"></div>
             <div class="detail-edit-row">
                 <label style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap;">Link del Guión:</label>
                 <input type="url" class="input" placeholder="Link de Drive" value="${data.drive_link || ''}" onchange="Modals.updateAssignmentField('drive_link', this.value)" style="max-width:300px;">
@@ -896,7 +905,83 @@ const Modals = {
         addSessionBtn.style.display = isCanEdit ? '' : 'none';
         completeBtn.style.display = (isCanEdit && data.status === 'in_progress') ? '' : 'none';
 
+        if (isCanEdit) {
+            if (!Modals._postUsers) {
+                const users = await API.get('/staff', true);
+                Modals._postUsers = users ? users.filter(u => u.role === 'post_productor') : [];
+            }
+            Modals._currentAssignmentStaff = data.assigned_staff ? data.assigned_staff.split(',').map(s=>s.trim()).filter(s=>s) : [];
+            Modals._currentAssignmentStaff.forEach(s => Modals.addAssignmentAttendeeField(s));
+            const saveBtn = document.getElementById('btn-save-assignment-attendees');
+            if (saveBtn) saveBtn.style.display = 'none'; // hide until changed
+        }
+
         this.open('modal-detail');
+    },
+
+    addAssignmentAttendeeField(value = '') {
+        const list = document.getElementById('assignment-attendees-list');
+        if (!list) return;
+        const max = 4;
+        if (list.children.length >= max) {
+            showToast(`Máximo ${max} personas`, 'info');
+            return;
+        }
+        const staff = Array.isArray(Modals._postUsers) ? Modals._postUsers : [];
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:6px;align-items:center;';
+
+        const select = document.createElement('select');
+        select.className = 'input select assignment-attendee-input';
+        select.style.cssText = 'flex:1;font-size:12px;';
+        select.innerHTML = '<option value="">-- Seleccionar persona --</option>';
+        staff.forEach(u => {
+            const opt = document.createElement('option');
+            opt.value = u.name || u.username;
+            opt.textContent = u.name || u.username;
+            if ((u.name || u.username) === value) opt.selected = true;
+            select.appendChild(opt);
+        });
+        if (value && !staff.find(u => (u.name || u.username) === value)) {
+            // Value not in list (might be legacy or external)
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = value;
+            opt.selected = true;
+            select.appendChild(opt);
+        }
+
+        select.onchange = () => document.getElementById('btn-save-assignment-attendees').style.display = 'inline-flex';
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.title = 'Quitar';
+        removeBtn.style.cssText = 'width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--red);cursor:pointer;font-size:16px;line-height:1;';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.onclick = () => {
+            row.remove();
+            document.getElementById('btn-save-assignment-attendees').style.display = 'inline-flex';
+        };
+
+        row.appendChild(select);
+        row.appendChild(removeBtn);
+        list.appendChild(row);
+        document.getElementById('btn-save-assignment-attendees').style.display = 'inline-flex';
+    },
+
+    async saveAssignmentAttendees() {
+        if (!this.currentAssignmentId) return;
+        const inputs = document.querySelectorAll('.assignment-attendee-input');
+        const attendees = [];
+        inputs.forEach(i => { if (i.value) attendees.push(i.value); });
+        
+        await API.put(`/assignments/${this.currentAssignmentId}`, { assigned_staff: attendees.join(', ') });
+        showToast('Personal asignado guardado', 'success');
+        document.getElementById('btn-save-assignment-attendees').style.display = 'none';
+        
+        // Update local context to avoid re-showing the save button on re-render
+        Modals._currentAssignmentStaff = attendees;
+        Calendar.render();
     },
 
     async updateAssignmentField(field, value) {
