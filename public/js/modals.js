@@ -836,6 +836,7 @@ const Modals = {
                 <option value="coordinacion">Coordinación de Fechas</option>
                 <option value="confirmacion">Confirmación de Reserva</option>
                 <option value="recordatorio">Recordatorio de Filmación</option>
+                <option value="esperando">Esperando en Estudio</option>
             </select>
             <button class="btn-sm btn-success" onclick="Modals.sendWhatsappTemplate('${cleanPhone}', '${safeTeacherName}', '${safeSubject}', '${safeSede}')" style="display:inline-flex; align-items:center; gap:4px; height: 32px; padding: 0 12px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
@@ -958,11 +959,18 @@ const Modals = {
         const templateId = select.value;
         if (!templateId) return showToast('Selecciona una plantilla', 'error');
 
+        // Determinar saludo según la hora local
+        const hour = new Date().getHours();
+        const greeting = hour < 12 ? 'Buenos días' : 'Buenas tardes';
+        
+        // Obtener el primer nombre del usuario actual (Post/Admin)
+        const myName = (App.user && App.user.name) ? App.user.name.split(' ')[0] : 'parte del equipo';
+
         let message = '';
         if (templateId === 'coordinacion') {
-            message = `Hola ${teacherName}, le escribimos del Estudio de Filmación EDTECH respecto a la materia ${subject}. ¿Podríamos coordinar las fechas de grabación en ${sede}?`;
+            message = `Hola ${teacherName}, ${greeting.toLowerCase()}. Soy ${myName} del Estudio de Filmación EDTECH. Le escribo respecto a la materia ${subject}, ¿podríamos coordinar las fechas de grabación en ${sede}?`;
         } else if (templateId === 'confirmacion') {
-            message = `Hola ${teacherName}, le confirmo que se han reservado los días y horas para la grabación de la materia ${subject} en el estudio de ${sede}.`;
+            message = `Hola ${teacherName}, ${greeting.toLowerCase()}. Soy ${myName} del Estudio de Filmación EDTECH. Le confirmo que se han reservado los días y horas para la grabación de la materia ${subject} en el estudio de ${sede}.`;
         } else if (templateId === 'recordatorio') {
             let sessionText = '';
             if (Modals._currentWhatsAppContext && Modals._currentWhatsAppContext.sessions && Modals._currentWhatsAppContext.sessions.length > 0) {
@@ -991,7 +999,9 @@ const Modals = {
                  sessionText = `(fechas por definir)`;
             }
 
-            message = `Hola ${teacherName}, le recordamos que tiene agendada una sesión de grabación para la materia ${subject} en ${sede} ${sessionText}. ¡Le esperamos!`;
+            message = `Hola ${teacherName}, ${greeting.toLowerCase()}. Soy ${myName} del Estudio de Filmación EDTECH. Le recordamos que tiene agendada una sesión de grabación para la materia ${subject} en ${sede} ${sessionText}. ¡Le esperamos!`;
+        } else if (templateId === 'esperando') {
+            message = `Hola ${teacherName}, ${greeting.toLowerCase()}. Soy ${myName}, encargad@ de la filmación para el día de hoy de la materia ${subject}. L@ estamos esperando en el estudio de ${sede}.`;
         }
 
         const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
