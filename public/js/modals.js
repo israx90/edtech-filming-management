@@ -1051,39 +1051,39 @@ const Modals = {
         // Obtener el primer nombre del usuario actual (Post/Admin)
         const myName = (App.user && App.user.name) ? App.user.name.split(' ')[0] : 'parte del equipo';
 
+        let sessionText = '';
+        if (Modals._currentWhatsAppContext && Modals._currentWhatsAppContext.sessions && Modals._currentWhatsAppContext.sessions.length > 0) {
+            // Find future sessions or use the next one
+            const now = new Date().toISOString().split('T')[0];
+            let nextSessions = Modals._currentWhatsAppContext.sessions.filter(s => s.session_date >= now);
+            if (nextSessions.length === 0) {
+                nextSessions = Modals._currentWhatsAppContext.sessions; // fallback to all if none in future
+            }
+            
+            // Format the sessions into a string: "22/05/2026 de 14:30 a 17:00"
+            const formattedSessions = nextSessions.map(s => {
+                const parts = s.session_date.split('-');
+                const dateF = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                const t1 = s.start_time?.substring(0,5) || '';
+                const t2 = s.end_time?.substring(0,5) || '';
+                return `${dateF} de ${t1} a ${t2}`;
+            });
+            
+            if (formattedSessions.length === 1) {
+                sessionText = `el día ${formattedSessions[0]}`;
+            } else {
+                sessionText = `los días:\n${formattedSessions.map(s => `- ${s}`).join('\n')}`;
+            }
+        } else {
+             sessionText = `(fechas por definir)`;
+        }
+
         let message = '';
         if (templateId === 'coordinacion') {
             message = `Hola ${teacherName}, ${greeting.toLowerCase()}. Soy ${myName} del Estudio de Filmación EDTECH. Le escribo respecto a la materia ${subject}, ¿podríamos coordinar las fechas de grabación en ${sede}?`;
         } else if (templateId === 'confirmacion') {
-            message = `Hola ${teacherName}, ${greeting.toLowerCase()}. Soy ${myName} del Estudio de Filmación EDTECH. Le confirmo que se han reservado los días y horas para la grabación de la materia ${subject} en el estudio de ${sede}.`;
+            message = `Hola ${teacherName}, ${greeting.toLowerCase()}. Soy ${myName} del Estudio de Filmación EDTECH. Le confirmo que hemos reservado el estudio de ${sede} para la grabación de la materia ${subject}, para ${sessionText}.`;
         } else if (templateId === 'recordatorio') {
-            let sessionText = '';
-            if (Modals._currentWhatsAppContext && Modals._currentWhatsAppContext.sessions && Modals._currentWhatsAppContext.sessions.length > 0) {
-                // Find future sessions or use the next one
-                const now = new Date().toISOString().split('T')[0];
-                let nextSessions = Modals._currentWhatsAppContext.sessions.filter(s => s.session_date >= now);
-                if (nextSessions.length === 0) {
-                    nextSessions = Modals._currentWhatsAppContext.sessions; // fallback to all if none in future
-                }
-                
-                // Format the sessions into a string: "22/05/2026 de 14:30 a 17:00"
-                const formattedSessions = nextSessions.map(s => {
-                    const parts = s.session_date.split('-');
-                    const dateF = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                    const t1 = s.start_time?.substring(0,5) || '';
-                    const t2 = s.end_time?.substring(0,5) || '';
-                    return `${dateF} de ${t1} a ${t2}`;
-                });
-                
-                if (formattedSessions.length === 1) {
-                    sessionText = `el día ${formattedSessions[0]}`;
-                } else {
-                    sessionText = `los días:\n${formattedSessions.map(s => `- ${s}`).join('\n')}\n`;
-                }
-            } else {
-                 sessionText = `(fechas por definir)`;
-            }
-
             message = `Hola ${teacherName}, ${greeting.toLowerCase()}. Soy ${myName} del Estudio de Filmación EDTECH. Le recordamos que tiene agendada una sesión de grabación para la materia ${subject} en ${sede} ${sessionText}. ¡Le esperamos!`;
         } else if (templateId === 'esperando') {
             // Inferencia de género básica para nombres en español
