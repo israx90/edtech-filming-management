@@ -804,10 +804,7 @@ const Modals = {
                 <div class="detail-field-label">Pasaje de Vuelo</div>
                 <div class="detail-field-value">${data.flight_ticket_path ? `<a href="/api${data.flight_ticket_path}" target="_blank" class="btn-sm btn-outline">📄 Ver PDF</a>` : '<span style="color:var(--text-muted)">No subido</span>'}</div>
             </div>
-            <div class="detail-field">
-                <div class="detail-field-label">Estado del Guión</div>
-            <div class="detail-field-value"><span class="script-badge" style="background:${(SCRIPT_COLORS[data.script_status]||SCRIPT_COLORS['not_uploaded']).bg};color:${(SCRIPT_COLORS[data.script_status]||SCRIPT_COLORS['not_uploaded']).color};padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;">${scriptText}</span></div>
-            </div>
+
             <div class="detail-field">
                 <div class="detail-field-label">Link del Guión</div>
                 <div class="detail-field-value">${data.drive_link ? `<a href="${data.drive_link}" target="_blank">Abrir en Drive ↗</a>` : '—'}</div>
