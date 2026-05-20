@@ -46,6 +46,9 @@ const App = {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app-wrapper').style.display = 'block';
         
+        // Quietly run migration to ensure DB is up to date (bypasses InfinityFree requirement of manual visits)
+        fetch('/api/migrate.php').catch(() => {});
+        
         document.getElementById('current-user-name').textContent = this.user.name;
         
         // Show role badge

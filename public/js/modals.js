@@ -975,7 +975,11 @@ const Modals = {
         const attendees = [];
         inputs.forEach(i => { if (i.value) attendees.push(i.value); });
         
-        await API.put(`/assignments/${this.currentAssignmentId}`, { assigned_staff: attendees.join(', ') });
+        const result = await API.put(`/assignments/${this.currentAssignmentId}`, { assigned_staff: attendees.join(', ') });
+        if (result && result.error) {
+            return showToast('Error al guardar: ' + result.error, 'error');
+        }
+        
         showToast('Personal asignado guardado', 'success');
         document.getElementById('btn-save-assignment-attendees').style.display = 'none';
         

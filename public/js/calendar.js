@@ -178,9 +178,23 @@ const Calendar = {
             const typeTag = session.subject_type
                 ? `<span style="display:inline-block;background:${tc.bg};color:${tc.color};font-size:9px;padding:1px 5px;border-radius:3px;font-weight:600;margin-top:2px;">${session.subject_type}</span>`
                 : '';
+
+            const t1 = session.start_time?.substring(0, 5) || '';
+            const t2 = session.end_time?.substring(0, 5) || '';
+            let isFullDay = false;
+            if (t1 && t2) {
+                const sMins = parseInt(t1.split(':')[0]) * 60 + parseInt(t1.split(':')[1]);
+                const eMins = parseInt(t2.split(':')[0]) * 60 + parseInt(t2.split(':')[1]);
+                // Si abarca antes/en 12:30 y después/en 14:30, o dura más de 5 horas
+                if ((sMins <= 12 * 60 + 30 && eMins >= 14 * 60 + 30) || (eMins - sMins >= 5 * 60)) {
+                    isFullDay = true;
+                }
+            }
+            const fullDayBadge = isFullDay ? `<span title="Día y Tarde" style="background:var(--amber-bg);color:var(--amber);padding:1px 4px;border-radius:3px;font-size:8px;font-weight:800;margin-left:4px;vertical-align:middle;display:inline-flex;align-items:center;gap:2px;border:1px solid rgba(251,191,36,0.3);"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>FULL DAY</span>` : '';
+
             ev.innerHTML = `
                 <div class="cal-event-header">
-                    <span class="cal-event-time">${session.start_time?.substring(0, 5)} - ${session.end_time?.substring(0, 5)}</span>
+                    <span class="cal-event-time">${t1} - ${t2} ${fullDayBadge}</span>
                     <span class="cal-event-code">${session.subject_code}</span>
                 </div>
                 <div class="cal-event-subject">${session.subject_name} ${typeTag}</div>
