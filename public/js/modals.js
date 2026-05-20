@@ -829,6 +829,7 @@ const Modals = {
         const safeTeacherName = (data.teacher_name || '').replace(/'/g, "\\'");
         const safeSubject = (data.subject_name || '').replace(/'/g, "\\'");
         const safeSede = (data.sede || 'La Paz');
+        Modals._currentWhatsAppContext = data; // Store context for the template generator
         const whatsappHtml = (canEdit && cleanPhone) ? `
         <div class="divider"></div>
         <div class="detail-edit-row" style="align-items:center;">
@@ -975,7 +976,34 @@ const Modals = {
         } else if (templateId === 'confirmacion') {
             message = `Hola ${teacherName}, le confirmo que se han reservado los días y horas para la grabación de la materia ${subject} en el estudio de ${sede}.`;
         } else if (templateId === 'recordatorio') {
-            message = `Hola ${teacherName}, le recordamos que el día de mañana tiene agendada una sesión de grabación para la materia ${subject} en ${sede}. ¡Le esperamos!`;
+            let sessionText = '';
+            if (Modals._currentWhatsAppContext && Modals._currentWhatsAppContext.sessions && Modals._currentWhatsAppContext.sessions.length > 0) {
+                // Find future sessions or use the next one
+                const now = new Date().toISOString().split('T')[0];
+                let nextSessions = Modals._currentWhatsAppContext.sessions.filter(s => s.session_date >= now);
+                if (nextSessions.length === 0) {
+                    nextSessions = Modals._currentWhatsAppContext.sessions; // fallback to all if none in future
+                }
+                
+                // Format the sessions into a string: "22/05/2026 de 14:30 a 17:00"
+                const formattedSessions = nextSessions.map(s => {
+                    const parts = s.session_date.split('-');
+                    const dateF = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    const t1 = s.start_time?.substring(0,5) || '';
+                    const t2 = s.end_time?.substring(0,5) || '';
+                    return `${dateF} de ${t1} a ${t2}`;
+                });
+                
+                if (formattedSessions.length === 1) {
+                    sessionText = `el día ${formattedSessions[0]}`;
+                } else {
+                    sessionText = `los días:\n${formattedSessions.map(s => `- ${s}`).join('\n')}\n`;
+                }
+            } else {
+                 sessionText = `(fechas por definir)`;
+            }
+
+            message = `Hola ${teacherName}, le recordamos que tiene agendada una sesión de grabación para la materia ${subject} en ${sede} ${sessionText}. ¡Le esperamos!`;
         }
 
         const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
