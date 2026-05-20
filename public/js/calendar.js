@@ -188,7 +188,7 @@ const Calendar = {
             `;
             ev.title = `${session.teacher_name} — ${session.subject_name}\n${session.start_time} - ${session.end_time}`;
 
-            if (App.user && App.user.role !== 'academica') {
+            if (App.user) {
                 ev.style.cursor = 'pointer';
                 ev.addEventListener('click', (e) => {
                     e.stopPropagation();

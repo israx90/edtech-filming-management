@@ -822,9 +822,11 @@ const Modals = {
             </div>
         </div>`;
 
-        // Whatsapp Templates Dropdown
+        const canEdit = App.user && ['admin', 'post_productor'].includes(App.user.role);
+
+        // Whatsapp Templates Dropdown (admin/post only)
         const cleanPhone = data.phone ? data.phone.replace(/[^0-9]/g, '') : '';
-        const whatsappHtml = cleanPhone ? `
+        const whatsappHtml = (canEdit && cleanPhone) ? `
         <div class="divider"></div>
         <div class="detail-edit-row" style="align-items:center;">
             <label style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap;">Plantillas WhatsApp:</label>
@@ -840,22 +842,24 @@ const Modals = {
             </button>
         </div>` : '';
 
-        // Edit section
-        html += `<div class="divider"></div>
-        <div class="detail-edit-row">
-            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap;">Guión:</label>
-            <select class="input select" onchange="Modals.updateAssignmentField('script_status', this.value)" style="max-width:240px;">
-                <option value="not_uploaded" ${data.script_status==='not_uploaded'?'selected':''}>Sin Guión</option>
-                <option value="guion_pendiente" ${data.script_status==='guion_pendiente'?'selected':''}>GUION PENDIENTE</option>
-                <option value="uploaded_hito_v" ${data.script_status==='uploaded_hito_v'?'selected':''}>Cargado (Hito V)</option>
-                <option value="pending_review" ${data.script_status==='pending_review'?'selected':''}>Pendiente de Revisión</option>
-                <option value="in_review" ${data.script_status==='in_review'?'selected':''}>En Revisión</option>
-                <option value="needs_corrections" ${data.script_status==='needs_corrections'?'selected':''}>Requiere Correcciones</option>
-                <option value="approved" ${data.script_status==='approved'?'selected':''}>Revisado ✓</option>
-            </select>
-            <input type="url" class="input" placeholder="Link de Drive" value="${data.drive_link || ''}" onchange="Modals.updateAssignmentField('drive_link', this.value)" style="max-width:300px;">
-        </div>
-        ${whatsappHtml}`;
+        // Edit section — editable for admin/post, read-only for academica
+        if (canEdit) {
+            html += `<div class="divider"></div>
+            <div class="detail-edit-row">
+                <label style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap;">Guión:</label>
+                <select class="input select" onchange="Modals.updateAssignmentField('script_status', this.value)" style="max-width:240px;">
+                    <option value="not_uploaded" ${data.script_status==='not_uploaded'?'selected':''}>Sin Guión</option>
+                    <option value="guion_pendiente" ${data.script_status==='guion_pendiente'?'selected':''}>GUION PENDIENTE</option>
+                    <option value="uploaded_hito_v" ${data.script_status==='uploaded_hito_v'?'selected':''}>Cargado (Hito V)</option>
+                    <option value="pending_review" ${data.script_status==='pending_review'?'selected':''}>Pendiente de Revisión</option>
+                    <option value="in_review" ${data.script_status==='in_review'?'selected':''}>En Revisión</option>
+                    <option value="needs_corrections" ${data.script_status==='needs_corrections'?'selected':''}>Requiere Correcciones</option>
+                    <option value="approved" ${data.script_status==='approved'?'selected':''}>Revisado ✓</option>
+                </select>
+                <input type="url" class="input" placeholder="Link de Drive" value="${data.drive_link || ''}" onchange="Modals.updateAssignmentField('drive_link', this.value)" style="max-width:300px;">
+            </div>
+            ${whatsappHtml}`;
+        }
 
         // Sessions list
         html += `<div class="divider"></div>
@@ -891,9 +895,13 @@ const Modals = {
 
         document.getElementById('detail-body').innerHTML = html;
 
-        // Show/hide complete button
+        // Show/hide footer action buttons based on role
+        const addSessionBtn = document.getElementById('btn-detail-add-session');
         const completeBtn = document.getElementById('btn-detail-complete');
-        completeBtn.style.display = data.status === 'in_progress' ? '' : 'none';
+        const isCanEdit = App.user && ['admin', 'post_productor'].includes(App.user.role);
+
+        addSessionBtn.style.display = isCanEdit ? '' : 'none';
+        completeBtn.style.display = (isCanEdit && data.status === 'in_progress') ? '' : 'none';
 
         this.open('modal-detail');
     },
