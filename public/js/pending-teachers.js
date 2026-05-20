@@ -375,7 +375,8 @@ const PendingTeachers = {
                 <!-- Comment Thread Panel (hidden by default) -->
                 <div class="pt-comment-panel" id="comment-panel-${t.id}" style="display:none;"></div>
             </div>`;
-        }
+            }   // end inner for (const t of groups[st])
+        }       // end outer for (const st of statusOrder)
         list.innerHTML = html;
 
         // Bind status select change handlers
