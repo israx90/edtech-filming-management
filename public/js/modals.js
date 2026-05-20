@@ -1019,6 +1019,11 @@ const Modals = {
             message = `Hola ${teacherName}, ${greeting.toLowerCase()}. Soy ${myName}, ${encargadx} de la filmación para el día de hoy de la materia ${subject}. ${lox} estamos esperando en el estudio de ${sede}.`;
         }
 
+        // Adjuntar Guía de Protocolo a ciertas plantillas
+        if (['coordinacion', 'confirmacion', 'recordatorio'].includes(templateId)) {
+            message += `\n\n📄 Adjunto le enviamos la Guía de Protocolo de Filmación: https://edtech-studio.page.gd/docs/Guia-Protocolo_V4.pdf`;
+        }
+
         // Add studio address instructions for La Paz
         if (sede && sede.toLowerCase().includes('la paz')) {
             message += `\n\n📍 Ubicación del estudio: Edificio Iturri piso 18. Av 6 de agosto esquina Campos. Sopocachi, La Paz.\n🗺️ Ver en mapa: https://maps.google.com/?q=Edificio+Iturri,+La+Paz\n\n*Nota:* La entrada al edificio es por la calle Campos. Para utilizar el ascensor, indíquele al portero que lo active.`;
