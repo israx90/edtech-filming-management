@@ -533,7 +533,7 @@ app.post('/api/pending-teachers', asyncHandler(async (req, res) => {
   if (!subject_code) { const ext = extractCodeAndName(subject); subject_code = ext.code; subject = ext.name; }
   const id = await execute(
     'INSERT INTO pending_teachers (semester_id, name, subject_code, subject, subject_type, phone, sede, is_external, notes, drive_link, flight_ticket_path, added_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [semester_id, name, subject_code, subject, subject_type || 'Teórica', phone, sede || 'La Paz', !!is_external, notes, drive_link, flight_ticket_path, user.id]
+    [semester_id ?? null, name ?? null, subject_code ?? null, subject ?? null, subject_type || 'Teórica', phone ?? null, sede || 'La Paz', !!is_external, notes ?? null, drive_link ?? null, flight_ticket_path ?? null, user.id]
   );
   res.status(201).json(await queryOne('SELECT pt.*, u.name as added_by_name FROM pending_teachers pt LEFT JOIN users u ON u.id = pt.added_by_user_id WHERE pt.id = ?', [id]));
 }));
