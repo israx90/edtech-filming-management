@@ -1,31 +1,21 @@
-const express = require('express');
+// Entrypoint para ejecutar el proyecto en Docker (o localmente con `node server.js`).
+//
+// Reutiliza EXACTAMENTE el mismo Express app que usa Vercel (api/index.js), sin
+// modificar la lógica de la API. Solo añade:
+//   1. Servido de los archivos estáticos del frontend (index.html, css/, js/, ...).
+//   2. Un app.listen() para poder correr fuera del entorno serverless de Vercel.
+//
+// El despliegue en Vercel sigue usando api/index.js + su hosting estático, así que
+// este archivo no afecta la funcionalidad actual.
 const path = require('path');
-const { getDb, closeDb } = require('./db/database');
-const apiRoutes = require('./routes/api');
+const express = require('express');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const app = require('./api/index.js');
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// Servir el frontend estático desde la raíz del proyecto.
+app.use(express.static(path.join(__dirname)));
 
-// Init DB then mount routes
-async function start() {
-    await getDb();
-
-    app.use('/api', apiRoutes);
-
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    });
-
-    const server = app.listen(PORT, () => {
-        console.log(`\n🎞️  ESTUDIO DE FILMACIÓN EDTECH`);
-        console.log(`   http://localhost:${PORT}\n`);
-    });
-
-    process.on('SIGINT', () => { closeDb(); server.close(() => process.exit(0)); });
-    process.on('SIGTERM', () => { closeDb(); server.close(() => process.exit(0)); });
-}
-
-start().catch(err => { console.error('Failed to start:', err); process.exit(1); });
+const port = process.env.APP_PORT || process.env.PORT || 3000;
+app.listen(port, '0.0.0.0', () => {
+  console.log(`[server] Calendario escuchando en http://0.0.0.0:${port}`);
+});

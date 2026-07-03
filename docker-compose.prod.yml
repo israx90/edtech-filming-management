@@ -1,0 +1,76 @@
+# ============================================================================
+# Compose de PRODUCCIÓN para Dokploy.
+#
+# Diferencias con docker-compose.yml (local):
+#   - No publica puertos al host: el ingress lo maneja Traefik (incluido en Dokploy).
+#   - Enrutamiento + SSL (Let's Encrypt) por labels de Traefik -> calendario.unifranz.online
+#   - Contraseñas por variables de entorno (se configuran en la UI de Dokploy).
+#   - La app se expone en la red externa `dokploy-network`; MySQL queda en una
+#     red interna privada (no accesible desde fuera).
+#
+# En Dokploy: crear un servicio tipo "Compose", apuntar "Compose Path" a
+# ./docker-compose.prod.yml y definir las variables de entorno de abajo.
+# ============================================================================
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: America/La_Paz
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Importa automáticamente el dump en el primer arranque (volumen vacío).
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      APP_PORT: 3000
+      APP_ENV: production
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_CONNECTION_LIMIT: 10
+      TZ: America/La_Paz
+    networks:
+      - internal        # para hablar con MySQL de forma privada
+      - dokploy-network  # para que Traefik la alcance
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      # HTTP (Traefik redirige a HTTPS globalmente en Dokploy)
+      - "traefik.http.routers.calendario-web.rule=Host(`calendario.unifranz.online`)"
+      - "traefik.http.routers.calendario-web.entrypoints=web"
+      # HTTPS + certificado Let's Encrypt
+      - "traefik.http.routers.calendario.rule=Host(`calendario.unifranz.online`)"
+      - "traefik.http.routers.calendario.entrypoints=websecure"
+      - "traefik.http.routers.calendario.tls=true"
+      - "traefik.http.routers.calendario.tls.certresolver=letsencrypt"
+      # Puerto interno del contenedor de la app
+      - "traefik.http.services.calendario.loadbalancer.server.port=3000"
+
+networks:
+  internal:
+  dokploy-network:
+    external: true
+
+volumes:
+  mysql_data:

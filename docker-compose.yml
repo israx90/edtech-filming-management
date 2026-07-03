@@ -1,0 +1,57 @@
+services:
+  # ---------------------------------------------------------------------------
+  # Base de datos MySQL. Al arrancar por primera vez importa automáticamente el
+  # dump "Data semestre VI.sql" que está en la raíz del proyecto (montado en
+  # /docker-entrypoint-initdb.d). El dump no incluye CREATE DATABASE, por eso se
+  # crea la base con MYSQL_DATABASE y el import se ejecuta dentro de ella.
+  # ---------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: calendario-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: edtech
+      MYSQL_USER: edtech
+      MYSQL_PASSWORD: edtech
+      TZ: America/La_Paz
+    ports:
+      # host:contenedor -> 3307 en el host para no chocar con un MySQL local
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Aplicación Node.js (API Express + frontend). Espera a que MySQL esté sano
+  # antes de arrancar. La conexión se configura por variables de entorno que
+  # src/db.js ya lee (dotenv no sobreescribe estas variables del contenedor).
+  # ---------------------------------------------------------------------------
+  app:
+    build: .
+    container_name: calendario-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      APP_PORT: 3000
+      APP_ENV: production
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: edtech
+      DB_USERNAME: edtech
+      DB_PASSWORD: edtech
+      DB_CONNECTION_LIMIT: 10
+      TZ: America/La_Paz
+    ports:
+      - "3000:3000"
+
+volumes:
+  mysql_data:
