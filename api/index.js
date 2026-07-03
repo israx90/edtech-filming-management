@@ -10,7 +10,12 @@ app.use(cors());
 app.use(express.json());
 
 // Async handler wrapper
-const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+const asyncHandler = fn => (req, res, next) => {
+  return Promise.resolve(fn(req, res, next)).catch(err => {
+    console.error('[API Error]', err);
+    res.status(500).json({ error: 'Error interno del servidor', detail: err.message });
+  });
+};
 
 // --- HEALTH CHECK (diagnóstico) ---
 app.get('/api/health', asyncHandler(async (req, res) => {
