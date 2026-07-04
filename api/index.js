@@ -9,6 +9,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from root (favicon, html, css, js)
+const path = require('path');
+app.use(express.static(path.join(__dirname, '..')));
+
+// Explicit favicon route as fallback
+app.get('/favicon.ico', (req, res) => res.redirect('/favicon.png'));
+app.get('/favicon.png', (req, res) => res.sendFile(path.join(__dirname, '..', 'favicon.png')));
+
+
 // Async handler wrapper
 const asyncHandler = fn => (req, res, next) => {
   return Promise.resolve(fn(req, res, next)).catch(err => {
