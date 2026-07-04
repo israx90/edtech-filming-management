@@ -173,7 +173,7 @@ app.get('/api/subjects', asyncHandler(async (req, res) => {
   }
   res.json(await queryAll(`
     SELECT s.*,
-           COALESCE(s.career, gs.career) AS career,
+           gs.career AS career,
            fa.id as assignment_id, fa.status as assignment_status,
            fa.last_hito_reached, fa.teacher_name, fa.script_status, fa.drive_link
     FROM subjects s
@@ -182,6 +182,7 @@ app.get('/api/subjects', asyncHandler(async (req, res) => {
     WHERE s.semester_id = ?
     ORDER BY s.code ASC
   `, [semId]));
+
 }));
 app.post('/api/subjects', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
