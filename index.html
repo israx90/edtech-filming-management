@@ -253,6 +253,10 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                         Eliminar Todas
                     </button>
+                    <button class="btn btn-outline" id="btn-deduplicate-subjects" style="border-color: var(--orange); color: var(--orange);">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="14" x2="15" y2="14"/><line x1="9" y1="10" x2="15" y2="10"/></svg>
+                        Eliminar Duplicados
+                    </button>
                 </div>
             </div>
 
@@ -548,6 +552,10 @@ PSI-220 Psicología General,Psicología"></textarea>
                 <input type="text" id="input-subject-name" placeholder="Ej: AHT-511 Administración del Talento Humano" class="input">
             </div>
             <div class="form-row">
+                <label for="input-subject-career">Carrera (Opcional)</label>
+                <input type="text" id="input-subject-career" placeholder="Ej: Lic. en Administración..." class="input">
+            </div>
+            <div class="form-row">
                 <label for="input-subject-type-select">Tipo</label>
                 <select id="input-subject-type-select" class="input select">
                     <option value="Teórica">Teórica</option>
@@ -559,6 +567,39 @@ PSI-220 Psicología General,Psicología"></textarea>
         <div class="modal-footer">
             <button class="btn btn-ghost" data-close-modal>Cancelar</button>
             <button class="btn btn-primary" id="btn-save-subject">Guardar</button>
+        </div>
+    </div>
+
+    <!-- Modal to Edit Subject -->
+    <div class="modal" id="modal-edit-subject">
+        <div class="modal-header">
+            <h3>Editar Materia</h3>
+            <button class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Código de Materia</label>
+                <input type="text" id="input-edit-sub-code" placeholder="Ej: MAT-101" class="input">
+            </div>
+            <div class="form-group">
+                <label>Nombre de Materia</label>
+                <input type="text" id="input-edit-sub-name" placeholder="Ej: Cálculo I" class="input">
+            </div>
+            <div class="form-group">
+                <label>Carrera (Opcional)</label>
+                <input type="text" id="input-edit-sub-career" placeholder="Ej: ICO, ADM..." class="input">
+            </div>
+            <div class="form-group">
+                <label>Tipo de Materia</label>
+                <select id="input-edit-sub-type" class="input">
+                    <option value="Teórica">Teórica</option>
+                    <option value="Numérica">Numérica</option>
+                    <option value="Proyecto Integrador">Proyecto Integrador</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" id="btn-save-edit-subject">Guardar Cambios</button>
         </div>
     </div>
 
@@ -586,6 +627,7 @@ PSI-220 Psicología General,Psicología"></textarea>
                     <textarea id="input-bulk-text" class="input textarea" rows="8" placeholder="ATH-611&#9;Administración del Talento Humano&#9;Teórica..."></textarea>
                 </div>
             </div>
+
 
             <!-- Step 2: Preview -->
             <div id="import-step-preview" style="display:none;">

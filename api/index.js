@@ -176,13 +176,13 @@ app.get('/api/subjects', asyncHandler(async (req, res) => {
 app.post('/api/subjects', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
   if (!requireAuth(user, res)) return;
-  let { code, name, semester_id, subject_type } = req.body;
+  let { code, name, semester_id, subject_type, career } = req.body;
   if (!name && code) { name = code; code = null; }
   if (!code) { const ext = extractCodeAndName(name); code = ext.code; name = ext.name; }
   if (!name || !semester_id) return res.status(400).json({ error: 'Campos requeridos' });
-  const existing = await queryOne('SELECT id FROM subjects WHERE UPPER(code) = UPPER(?) AND UPPER(name) = UPPER(?) AND semester_id = ?', [code, name, semester_id]);
+  const existing = await queryOne('SELECT id FROM subjects WHERE UPPER(code) = UPPER(?) AND UPPER(name) = UPPER(?) AND semester_id = ? AND (career = ? OR career IS NULL)', [code, name, semester_id, career || null]);
   if (existing) return res.status(409).json({ error: 'Esta materia ya existe en el semestre' });
-  const id = await execute('INSERT INTO subjects (code, name, subject_type, semester_id) VALUES (?, ?, ?, ?)', [code, name, subject_type || 'Teórica', semester_id]);
+  const id = await execute('INSERT INTO subjects (code, name, subject_type, semester_id, career) VALUES (?, ?, ?, ?, ?)', [code, name, subject_type || 'Teórica', semester_id, career || null]);
   res.status(201).json(await queryOne('SELECT * FROM subjects WHERE id = ?', [id]));
 }));
 app.post('/api/subjects/bulk', asyncHandler(async (req, res) => {
@@ -200,10 +200,11 @@ app.post('/api/subjects/bulk', asyncHandler(async (req, res) => {
     try {
       let code = item.code?.trim() || null;
       let name = item.name?.trim() || null;
+      let career = item.career?.trim() || null;
       if (!code) { const ext = extractCodeAndName(name); code = ext.code; name = ext.name; }
-      const existing = await queryOne('SELECT id FROM subjects WHERE UPPER(code) = UPPER(?) AND UPPER(name) = UPPER(?) AND semester_id = ?', [code, name, semester_id]);
+      const existing = await queryOne('SELECT id FROM subjects WHERE UPPER(code) = UPPER(?) AND UPPER(name) = UPPER(?) AND semester_id = ? AND (career = ? OR career IS NULL)', [code, name, semester_id, career]);
       if (existing) { results.push({ ...item, skipped: true }); continue; }
-      await execute('INSERT INTO subjects (code, name, subject_type, semester_id) VALUES (?, ?, ?, ?)', [code, name, item.subject_type || 'Teórica', semester_id]);
+      await execute('INSERT INTO subjects (code, name, subject_type, semester_id, career) VALUES (?, ?, ?, ?, ?)', [code, name, item.subject_type || 'Teórica', semester_id, career]);
       results.push({ ...item, success: true });
     } catch (e) { results.push({ ...item, error: e.message }); }
   }
@@ -222,9 +223,11 @@ app.put('/api/subjects/:id', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
   if (!requireAuth(user, res)) return;
   const id = parseInt(req.params.id);
-  const { code, name, completed } = req.body;
+  const { code, name, completed, subject_type, career } = req.body;
   if (code !== undefined) await execute('UPDATE subjects SET code = ? WHERE id = ?', [code, id]);
   if (name !== undefined) await execute('UPDATE subjects SET name = ? WHERE id = ?', [name, id]);
+  if (subject_type !== undefined) await execute('UPDATE subjects SET subject_type = ? WHERE id = ?', [subject_type, id]);
+  if (career !== undefined) await execute('UPDATE subjects SET career = ? WHERE id = ?', [career, id]);
   if (completed !== undefined) await execute('UPDATE subjects SET completed = ? WHERE id = ?', [!!completed, id]);
   res.json(await queryOne('SELECT * FROM subjects WHERE id = ?', [id]));
 }));
@@ -237,6 +240,31 @@ app.delete('/api/subjects/:id', asyncHandler(async (req, res) => {
   await execute('DELETE FROM filming_assignments WHERE subject_id = ?', [id]);
   await execute('DELETE FROM subjects WHERE id = ?', [id]);
   res.json({ success: true });
+}));
+app.post('/api/subjects/deduplicate', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAdmin(user, res)) return;
+  const { semester_id } = req.body;
+  if (!semester_id) return res.status(400).json({ error: 'semester_id es requerido' });
+
+  // Update orphaned assignments to point to the surviving subject (the one with lowest ID, which means t1.id > t2.id and we keep t2)
+  await execute(`
+    UPDATE filming_assignments fa
+    JOIN subjects t1 ON fa.subject_id = t1.id
+    JOIN subjects t2 ON t1.code = t2.code AND t1.semester_id = t2.semester_id AND t1.id > t2.id
+    SET fa.subject_id = t2.id
+    WHERE t1.semester_id = ?
+  `, [semester_id]);
+
+  // Delete the duplicates
+  const result = await execute(`
+    DELETE t1 FROM subjects t1
+    INNER JOIN subjects t2 
+    WHERE t1.id > t2.id AND t1.code = t2.code AND t1.semester_id = t2.semester_id AND t1.semester_id = ?
+  `, [semester_id]);
+
+  await logAction(user, `Eliminó materias duplicadas del semestre #${semester_id}`, 'subject');
+  res.json({ success: true, message: 'Duplicados eliminados correctamente' });
 }));
 
 // --- ASSIGNMENTS ---

@@ -22,6 +22,9 @@ const Modals = {
         document.getElementById('btn-add-subject').addEventListener('click', () => this.openAddSubject());
         document.getElementById('btn-bulk-import').addEventListener('click', () => this.openBulkImport());
         document.getElementById('btn-delete-all-subjects')?.addEventListener('click', () => Goals.deleteAllSubjects());
+        document.getElementById('btn-deduplicate-subjects')?.addEventListener('click', () => {
+            if (App.activeSemester) Goals.deduplicateSemester(App.activeSemester.id);
+        });
         document.getElementById('btn-settings').addEventListener('click', () => this.openSemesterManager());
         document.getElementById('btn-new-reservation')?.addEventListener('click', () => this.openNewReservation());
 
@@ -402,16 +405,54 @@ const Modals = {
     openAddSubject() {
         if (!App.activeSemester) return showToast('Primero crea un semestre', 'error');
         document.getElementById('input-subject-name').value = '';
+        document.getElementById('input-subject-career').value = '';
         this.open('modal-subject');
     },
 
     async saveSubject() {
         const name = document.getElementById('input-subject-name').value.trim();
+        const career = document.getElementById('input-subject-career').value.trim();
         const subject_type = document.getElementById('input-subject-type-select')?.value || 'Teórica';
         if (!name) return showToast('Ingresa el nombre o materia', 'error');
-        const result = await API.post('/subjects', { name, subject_type, semester_id: App.activeSemester.id });
+        const result = await API.post('/subjects', { name, subject_type, career, semester_id: App.activeSemester.id });
         if (result.error) return showToast(result.error, 'error');
         showToast(`Materia agregada`, 'success');
+        this.closeAll();
+        Goals.refresh();
+        Dashboard.refresh();
+    },
+
+    // ===== EDIT SUBJECT =====
+
+    openEditSubject(id) {
+        const s = Goals.subjects.find(x => x.id === id);
+        if (!s) return;
+        document.getElementById('input-edit-sub-code').value = s.code || '';
+        document.getElementById('input-edit-sub-name').value = s.name || '';
+        document.getElementById('input-edit-sub-career').value = s.career || '';
+        document.getElementById('input-edit-sub-type').value = s.subject_type || 'Teórica';
+        document.getElementById('btn-save-edit-subject').onclick = () => this.saveEditSubject(id);
+        
+        // Setup deduplicate button contextually
+        document.getElementById('btn-edit-remove-duplicates').onclick = () => {
+            Goals.deduplicateSemester(App.activeSemester.id);
+            this.closeAll();
+        };
+
+        this.open('modal-edit-subject');
+    },
+
+    async saveEditSubject(id) {
+        const code = document.getElementById('input-edit-sub-code').value.trim();
+        const name = document.getElementById('input-edit-sub-name').value.trim();
+        const career = document.getElementById('input-edit-sub-career').value.trim();
+        const subject_type = document.getElementById('input-edit-sub-type').value;
+
+        if (!name) return showToast('Ingresa el nombre de la materia', 'error');
+        
+        const result = await API.put(`/subjects/${id}`, { code, name, career, subject_type });
+        if (result.error) return showToast(result.error, 'error');
+        showToast('Materia actualizada', 'success');
         this.closeAll();
         Goals.refresh();
         Dashboard.refresh();
@@ -514,18 +555,34 @@ const Modals = {
         const seen = new Set();
 
         for (const line of lines) {
-            let code = '', name = '', subject_type = 'Teórica';
+            let code = '', name = '', subject_type = 'Teórica', career = '';
 
             if (line.includes('\t')) {
                 const parts = line.split('\t').map(p => p.trim());
                 code = parts[0] || '';
                 name = parts[1] || '';
-                if (parts[2]) subject_type = parts[2];
+                if (parts[2]) {
+                    if (parts[2].match(/^(Teórica|Numérica|Proyecto Integrador)$/i)) {
+                        subject_type = parts[2];
+                        if (parts[3]) career = parts[3];
+                    } else {
+                        career = parts[2];
+                        if (parts[3]) subject_type = parts[3];
+                    }
+                }
             } else if (line.includes(',')) {
                 const parts = this.parseCSVLine(line);
                 code = parts[0] || '';
                 name = parts[1] || '';
-                if (parts[2]) subject_type = parts[2];
+                if (parts[2]) {
+                    if (parts[2].match(/^(Teórica|Numérica|Proyecto Integrador)$/i)) {
+                        subject_type = parts[2];
+                        if (parts[3]) career = parts[3];
+                    } else {
+                        career = parts[2];
+                        if (parts[3]) subject_type = parts[3];
+                    }
+                }
             } else {
                 const trimmed = line.trim();
                 const match = trimmed.match(/^([A-Za-z\.\s]+-?\s*\d+)\s+(.+)$/);
@@ -559,7 +616,7 @@ const Modals = {
             if (seen.has(key)) continue;
             seen.add(key);
 
-            subjects.push({ code: normalizedCode, name: name.trim(), subject_type, checked: true });
+            subjects.push({ code: normalizedCode, name: name.trim(), subject_type, career: career.trim(), checked: true });
         }
 
         return subjects;

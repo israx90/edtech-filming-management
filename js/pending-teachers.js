@@ -111,10 +111,30 @@ const PendingTeachers = {
     populateSubjectSelects() {
         if (!Array.isArray(this.subjects)) return;
         const subjects = this.subjects.filter(s => !s.completed);
+        const abbreviateCareer = (career) => {
+            if (!career) return '';
+            const c = career.toUpperCase();
+            if (c.includes('INGENIERÍA COMERCIAL') || c.includes('INGENIERIA COMERCIAL')) return 'ICO';
+            if (c.includes('ADMINISTRACIÓN') || c.includes('ADMINISTRACION')) return 'ADM';
+            if (c.includes('CONTADURÍA') || c.includes('CONTADURIA')) return 'CTP';
+            if (c.includes('DERECHO')) return 'DER';
+            if (c.includes('PSICOLOGÍA') || c.includes('PSICOLOGIA')) return 'PSI';
+            if (c.includes('PUBLICIDAD')) return 'PUB';
+            if (c.includes('SISTEMAS')) return 'SIS';
+            if (c.includes('MÉDICO') || c.includes('MEDICO') || c.includes('MEDICINA')) return 'MED';
+            if (c.includes('BIOQUÍMICA') || c.includes('BIOQUIMICA')) return 'BIO';
+            if (c.includes('ODONTOLOGÍA') || c.includes('ODONTOLOGIA')) return 'ODO';
+            if (c.includes('ENFERMERÍA') || c.includes('ENFERMERIA')) return 'ENF';
+            if (c.includes('PERIODISMO')) return 'PER';
+            if (c.includes('DISEÑO') || c.includes('DISENO')) return 'DIS';
+            return career.substring(0, 3);
+        };
+
         const makeOptions = () => {
             let html = '<option value="">-- Seleccionar Materia --</option>';
             for (const s of subjects) {
-                const label = `${s.code} — ${s.name}`;
+                const careerAbbr = s.career ? abbreviateCareer(s.career) : '';
+                const label = `${s.code} — ${s.name}${careerAbbr ? ` (${careerAbbr})` : ''}`;
                 html += `<option value="${s.name}" data-code="${s.code}" data-type="${s.subject_type || 'Teórica'}">${label}</option>`;
             }
             return html;

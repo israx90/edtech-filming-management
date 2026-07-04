@@ -583,7 +583,7 @@ const Goals = {
 
             html += `<div class="subject-item" data-id="${s.id}">
                 <span class="subject-code">${s.code}</span>
-                <span class="subject-name">${s.name}</span>
+                <span class="subject-name">${s.name}${s.career ? ` <small style="color:var(--text-muted);font-size:11px; display:block;">${s.career}</small>` : ''}</span>
                 <div class="subject-badges">
                     <span class="subject-type-tag" style="background:${tc.bg};color:${tc.color}">${typeLabel}</span>
                     ${hitoText ? `<span class="subject-hito">Últ: ${hitoText}</span>` : ''}
@@ -598,6 +598,9 @@ const Goals = {
                     ${canEdit ? `
                     <button class="btn-icon" style="color: ${s.completed ? 'var(--green)' : 'var(--text-muted)'}" onclick="Goals.toggleComplete(${s.id}, ${s.completed})" title="${s.completed ? 'Desmarcar' : 'Completar'}">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </button>
+                    <button class="btn-icon" onclick="Modals.openEditSubject(${s.id})" title="Editar">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                     </button>
                     <button class="btn-icon" onclick="Goals.deleteSubject(${s.id})" title="Eliminar">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -614,6 +617,20 @@ const Goals = {
         showToast(currentState ? 'Materia desmarcada' : 'Materia completada', 'success');
         this.refresh();
         Dashboard.refresh();
+    },
+
+    async deduplicateSemester(semester_id) {
+        if (!semester_id) return;
+        Calendar.showConfirm({
+            title: 'Eliminar Duplicados',
+            message: '¿Estás seguro de que quieres eliminar las materias duplicadas de este semestre? Se conservará la materia más antigua y se reasignarán las filmaciones.'
+        }, async () => {
+            const result = await API.post('/subjects/deduplicate', { semester_id });
+            if (result.error) return showToast(result.error, 'error');
+            showToast(result.message || 'Duplicados eliminados', 'success');
+            this.refresh();
+            Dashboard.refresh();
+        });
     },
 
     async deleteSubject(id) {
