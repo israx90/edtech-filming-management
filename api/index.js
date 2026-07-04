@@ -29,6 +29,33 @@ app.get('/api/health', asyncHandler(async (req, res) => {
   res.json({ status: dbOk ? 'ok' : 'error', DATABASE_URL_set: hasDb, db_connected: dbOk, db_error: dbError });
 }));
 
+app.get('/api/logs/sql', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAdmin(user, res)) return;
+  const fs = require('fs');
+  const path = require('path');
+  const logFile = path.join(__dirname, '..', 'sql_logs.txt');
+  if (fs.existsSync(logFile)) {
+    res.type('text/plain').send(fs.readFileSync(logFile, 'utf8'));
+  } else {
+    res.type('text/plain').send('No hay logs SQL registrados aún.');
+  }
+}));
+
+app.get('/api/logs/sql/clear', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAdmin(user, res)) return;
+  const fs = require('fs');
+  const path = require('path');
+  const logFile = path.join(__dirname, '..', 'sql_logs.txt');
+  if (fs.existsSync(logFile)) {
+    fs.writeFileSync(logFile, '');
+    res.json({ success: true, message: 'Logs limpiados' });
+  } else {
+    res.json({ success: true, message: 'No había logs que limpiar' });
+  }
+}));
+
 // --- AUTH & ME ---
 app.post('/api/login', asyncHandler(async (req, res) => {
   const { username, password } = req.body;

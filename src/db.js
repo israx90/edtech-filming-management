@@ -1,5 +1,17 @@
 require('dotenv').config();
 const mysql = require('mysql2/promise');
+const fs = require('fs');
+const path = require('path');
+
+const logFile = path.join(__dirname, '..', 'sql_logs.txt');
+
+function logQuery(sql, params) {
+  const timestamp = new Date().toISOString();
+  const logEntry = `[${timestamp}] SQL: ${sql}\nPARAMS: ${JSON.stringify(params)}\n\n`;
+  fs.appendFile(logFile, logEntry, err => {
+    if (err) console.error('Failed to write SQL log:', err);
+  });
+}
 
 let pool;
 function getPool() {
@@ -21,6 +33,7 @@ function getPool() {
 }
 
 async function queryAll(sql, params = []) {
+  logQuery(sql, params);
   const client = getPool();
   const [rows] = await client.execute(sql, params);
   return rows;
@@ -32,6 +45,7 @@ async function queryOne(sql, params = []) {
 }
 
 async function execute(sql, params = []) {
+  logQuery(sql, params);
   const client = getPool();
   const [result] = await client.execute(sql, params);
   // Return the insertId for INSERT statements
