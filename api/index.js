@@ -171,7 +171,17 @@ app.get('/api/subjects', asyncHandler(async (req, res) => {
     if (!active) return res.json([]);
     semId = active.id;
   }
-  res.json(await queryAll("SELECT s.*, fa.id as assignment_id, fa.status as assignment_status, fa.last_hito_reached, fa.teacher_name, fa.script_status, fa.drive_link FROM subjects s LEFT JOIN filming_assignments fa ON fa.subject_id = s.id AND fa.status != 'cancelled' WHERE s.semester_id = ? ORDER BY s.code ASC", [semId]));
+  res.json(await queryAll(`
+    SELECT s.*,
+           COALESCE(s.career, gs.career) AS career,
+           fa.id as assignment_id, fa.status as assignment_status,
+           fa.last_hito_reached, fa.teacher_name, fa.script_status, fa.drive_link
+    FROM subjects s
+    LEFT JOIN filming_assignments fa ON fa.subject_id = s.id AND fa.status != 'cancelled'
+    LEFT JOIN global_subjects gs ON UPPER(TRIM(gs.code)) = UPPER(TRIM(s.code))
+    WHERE s.semester_id = ?
+    ORDER BY s.code ASC
+  `, [semId]));
 }));
 app.post('/api/subjects', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
