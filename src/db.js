@@ -52,4 +52,16 @@ async function execute(sql, params = []) {
   return result.insertId;
 }
 
-module.exports = { getPool, queryAll, queryOne, execute };
+async function logAction(user, action, entityType, entityId, details) {
+  try {
+    await execute(
+      'INSERT INTO activity_log (user_id, user_name, action, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?, ?)',
+      [user?.id || null, user?.name || 'Sistema', action, entityType || null, entityId || null, details || null]
+    );
+  } catch (e) {
+    // Never let logging crash the main operation
+    console.error('[logAction error]', e.message);
+  }
+}
+
+module.exports = { getPool, queryAll, queryOne, execute, logAction };
