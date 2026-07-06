@@ -26,6 +26,13 @@ const asyncHandler = fn => (req, res, next) => {
   });
 };
 
+// --- DB MIGRATIONS (run once at startup) ---
+(async () => {
+  try {
+    await execute("ALTER TABLE recording_sessions ADD COLUMN IF NOT EXISTS is_displacement TINYINT(1) DEFAULT 0");
+  } catch (e) { /* Column already exists or DB not ready yet */ }
+})();
+
 // --- HEALTH CHECK (diagnóstico) ---
 app.get('/api/health', asyncHandler(async (req, res) => {
   const hasDb = !!process.env.DATABASE_URL;
@@ -416,14 +423,14 @@ app.get('/api/sessions/availability', asyncHandler(async (req, res) => {
 app.post('/api/sessions', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
   if (!requireAuth(user, res)) return;
-  const { assignment_id, session_date, start_time, end_time, hito_reached, notes, staff_1_id, staff_2_id } = req.body;
+  const { assignment_id, session_date, start_time, end_time, hito_reached, notes, staff_1_id, staff_2_id, is_displacement } = req.body;
   const conflict = await queryOne(
     "SELECT rs.id FROM recording_sessions rs WHERE rs.session_date = ? AND rs.status != 'cancelled' AND ((? >= rs.start_time AND ? < rs.end_time) OR (? > rs.start_time AND ? <= rs.end_time) OR (? <= rs.start_time AND ? >= rs.end_time))",
     [session_date, start_time, start_time, end_time, end_time, start_time, end_time]
   );
   if (conflict) return res.status(409).json({ error: 'Conflicto de horario' });
-  const sid = await execute('INSERT INTO recording_sessions (assignment_id, session_date, start_time, end_time, hito_reached, notes, staff_1_id, staff_2_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [assignment_id, session_date, start_time, end_time, hito_reached || null, notes || null, staff_1_id || null, staff_2_id || null]);
+  const sid = await execute('INSERT INTO recording_sessions (assignment_id, session_date, start_time, end_time, hito_reached, notes, staff_1_id, staff_2_id, is_displacement) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [assignment_id, session_date, start_time, end_time, hito_reached || null, notes || null, staff_1_id || null, staff_2_id || null, is_displacement ? 1 : 0]);
   if (hito_reached) {
     await execute('UPDATE filming_assignments SET last_hito_reached = ? WHERE id = ?', [hito_reached, assignment_id]);
     if (hito_reached === 'semanas') {
@@ -448,6 +455,7 @@ app.put('/api/sessions/:id', asyncHandler(async (req, res) => {
   if ('staff_2_id' in body) await execute('UPDATE recording_sessions SET staff_2_id = ? WHERE id = ?', [body.staff_2_id, id]);
   if ('staff_3_id' in body) await execute('UPDATE recording_sessions SET staff_3_id = ? WHERE id = ?', [body.staff_3_id, id]);
   if ('staff_4_id' in body) await execute('UPDATE recording_sessions SET staff_4_id = ? WHERE id = ?', [body.staff_4_id, id]);
+  if ('is_displacement' in body) await execute('UPDATE recording_sessions SET is_displacement = ? WHERE id = ?', [body.is_displacement ? 1 : 0, id]);
   if (body.status !== undefined) {
     await execute('UPDATE recording_sessions SET status = ? WHERE id = ?', [body.status, id]);
     if (body.status === 'cancelled') {

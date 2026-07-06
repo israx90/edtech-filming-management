@@ -1797,6 +1797,8 @@ const Modals = {
         if (availDisplay) { availDisplay.style.display = 'none'; availDisplay.textContent = ''; }
         const hitoEl = document.getElementById('input-new-session-hito');
         if (hitoEl) hitoEl.value = '';
+        const dispEl = document.getElementById('input-new-session-displacement');
+        if (dispEl) dispEl.checked = false;
         const notesEl = document.getElementById('input-new-session-notes');
         if (notesEl) notesEl.value = '';
         const errDiv = document.getElementById('add-session-error');
@@ -1972,10 +1974,11 @@ const Modals = {
         const notes = document.getElementById('input-new-session-notes').value.trim();
         const staff_1_id = document.getElementById('input-new-session-staff-1')?.value || null;
         const staff_2_id = document.getElementById('input-new-session-staff-2')?.value || null;
+        const is_displacement = document.getElementById('input-new-session-displacement')?.checked ? 1 : 0;
 
         if (!session_date || !start_time || !end_time) return showToast('Completa fecha y horario', 'error');
 
-        const result = await API.post('/sessions', { assignment_id, session_date, start_time, end_time, hito_reached, notes, staff_1_id, staff_2_id });
+        const result = await API.post('/sessions', { assignment_id, session_date, start_time, end_time, hito_reached, notes, staff_1_id, staff_2_id, is_displacement });
         if (result.error) {
             if (result.error.includes('Conflicto')) {
                 const errDiv = document.getElementById('add-session-error');

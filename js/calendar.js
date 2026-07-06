@@ -259,7 +259,8 @@ const Calendar = {
             if (isFullDay) ev.classList.add('is-fullday');
             const fullDayBadge = isFullDay ? `<span title="Día y Tarde" style="background:var(--amber-bg);color:var(--amber);padding:1px 4px;border-radius:3px;font-size:8px;font-weight:800;margin-left:4px;vertical-align:middle;display:inline-flex;align-items:center;gap:2px;border:1px solid rgba(251,191,36,0.3);"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>FULL DAY</span>` : '';
             const cancelledBadge = isCancelled ? `<span style="background:rgba(239,68,68,0.15);color:#ef4444;padding:1px 4px;border-radius:3px;font-size:8px;font-weight:800;margin-left:4px;vertical-align:middle;display:inline-flex;align-items:center;gap:2px;border:1px solid rgba(239,68,68,0.3);"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>CANCELADO</span>` : '';
-
+            const isDisplacement = session.is_displacement == 1 || session.is_displacement === true;
+            const displacementBadge = isDisplacement ? `<span title="Desplazamiento — llevar equipo" style="background:rgba(251,191,36,0.15);color:#fbbf24;padding:1px 5px;border-radius:3px;font-size:8px;font-weight:800;margin-left:4px;vertical-align:middle;display:inline-flex;align-items:center;gap:3px;border:1px solid rgba(251,191,36,0.3);"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>EQUIPO</span>` : '';
 
             const isExternal = session.sede && !['la paz', 'el alto'].includes(session.sede.trim().toLowerCase());
             const externalBadge = isExternal
@@ -268,7 +269,7 @@ const Calendar = {
 
             ev.innerHTML = `
                 <div class="cal-event-header">
-                    <span class="cal-event-time">${t1} - ${t2} ${fullDayBadge}${cancelledBadge}</span>
+                    <span class="cal-event-time">${t1} - ${t2} ${fullDayBadge}${cancelledBadge}${displacementBadge}</span>
                     <span class="cal-event-code">${session.subject_code}</span>
                 </div>
                 <div class="cal-event-subject" style="${isCancelled ? 'text-decoration:line-through;opacity:0.6;' : ''}">
