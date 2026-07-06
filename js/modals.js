@@ -434,10 +434,13 @@ const Modals = {
         document.getElementById('btn-save-edit-subject').onclick = () => this.saveEditSubject(id);
         
         // Setup deduplicate button contextually
-        document.getElementById('btn-edit-remove-duplicates').onclick = () => {
-            Goals.deduplicateSemester(App.activeSemester.id);
-            this.closeAll();
-        };
+        const btnDeduplicate = document.getElementById('btn-edit-remove-duplicates');
+        if (btnDeduplicate) {
+            btnDeduplicate.onclick = () => {
+                Goals.deduplicateSemester(App.activeSemester.id);
+                this.closeAll();
+            };
+        }
 
         this.open('modal-edit-subject');
     },

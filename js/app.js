@@ -583,7 +583,7 @@ const Goals = {
 
             html += `<div class="subject-item" data-id="${s.id}">
                 <span class="subject-code">${s.code}</span>
-                <span class="subject-name">${s.name}${s.career ? ` <small style="color:var(--text-muted);font-size:11px; display:block;">${s.career}</small>` : ''}</span>
+                <span class="subject-name">${s.name}${s.career ? ` <small style="color:${s.career.toLowerCase().includes('academy') ? 'var(--cyan)' : 'var(--text-muted)'};font-size:11px; display:block;">${s.career}</small>` : ''}</span>
                 <div class="subject-badges">
                     <span class="subject-type-tag" style="background:${tc.bg};color:${tc.color}">${typeLabel}</span>
                     ${hitoText ? `<span class="subject-hito">Últ: ${hitoText}</span>` : ''}

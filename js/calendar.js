@@ -271,7 +271,10 @@ const Calendar = {
                     <span class="cal-event-time">${t1} - ${t2} ${fullDayBadge}${cancelledBadge}</span>
                     <span class="cal-event-code">${session.subject_code}</span>
                 </div>
-                <div class="cal-event-subject" style="${isCancelled ? 'text-decoration:line-through;opacity:0.6;' : ''}">${session.subject_name} ${typeTag}</div>
+                <div class="cal-event-subject" style="${isCancelled ? 'text-decoration:line-through;opacity:0.6;' : ''}">
+                    ${session.subject_name} ${typeTag}
+                    ${session.career && session.career.toLowerCase().includes('academy') ? `<span style="display:inline-block;background:var(--cyan-bg, rgba(34,211,238,0.15));color:var(--cyan, #22d3ee);font-size:9px;padding:1px 5px;border-radius:3px;font-weight:600;margin-top:2px;">${session.career}</span>` : ''}
+                </div>
                 <div class="cal-event-teacher">${externalBadge}${session.teacher_name}</div>
             `;
             ev.title = `${isCancelled ? 'CANCELADO — ' : ''}${session.teacher_name}${isExternal ? ` (${session.sede})` : ''} — ${session.subject_name}\n${session.start_time} - ${session.end_time}`;
