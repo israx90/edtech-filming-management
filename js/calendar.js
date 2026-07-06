@@ -423,21 +423,32 @@ const Calendar = {
         // Meeting requests for this day (pending)
         const dayMeetingRequests = (this.meetingRequests || []).filter(mr => mr.requested_date === dateStr);
 
-        const hasFullDaySession = activeDaySessions.some(s => {
-            const t1 = s.start_time?.substring(0, 5) || '';
-            const t2 = s.end_time?.substring(0, 5) || '';
+        const coversFullDay = (item) => {
+            const t1 = item.start_time?.substring(0, 5) || '';
+            const t2 = item.end_time?.substring(0, 5) || '';
             if (t1 && t2) {
                 const sMins = parseInt(t1.split(':')[0]) * 60 + parseInt(t1.split(':')[1]);
                 const eMins = parseInt(t2.split(':')[0]) * 60 + parseInt(t2.split(':')[1]);
                 return sMins <= 13 * 60 && eMins >= 14 * 60 + 30;
             }
             return false;
-        });
+        };
+
+        const spillsToAfternoon = (item) => {
+            const t2 = item.end_time?.substring(0, 5) || '';
+            if (t2) {
+                const eMins = parseInt(t2.split(':')[0]) * 60 + parseInt(t2.split(':')[1]);
+                return eMins >= 14 * 60; // Ends at 14:00 or later
+            }
+            return false;
+        };
+
+        const hasFullDaySession = activeDaySessions.some(coversFullDay) || blockingReservations.some(coversFullDay);
 
         const activeMorningSessions = activeDaySessions.filter(s => s.start_time < '13:00:00');
         const activeAfternoonSessions = activeDaySessions.filter(s => s.start_time >= '13:00:00');
         const isMorningReserved = activeMorningSessions.length > 0 || morningReservations.length > 0;
-        const isAfternoonReserved = activeAfternoonSessions.length > 0 || afternoonReservations.length > 0;
+        const isAfternoonReserved = activeAfternoonSessions.length > 0 || afternoonReservations.length > 0 || activeMorningSessions.some(spillsToAfternoon) || morningReservations.some(spillsToAfternoon);
 
         if (!isOtherMonth && !closedWeek) {
             const today = new Date();
