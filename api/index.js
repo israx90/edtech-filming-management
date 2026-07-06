@@ -200,9 +200,15 @@ app.post('/api/subjects', asyncHandler(async (req, res) => {
   if (!name && code) { name = code; code = null; }
   if (!code) { const ext = extractCodeAndName(name); code = ext.code; name = ext.name; }
   if (!name || !semester_id) return res.status(400).json({ error: 'Campos requeridos' });
-  const existing = await queryOne('SELECT id FROM subjects WHERE UPPER(code) = UPPER(?) AND UPPER(name) = UPPER(?) AND semester_id = ? AND (career = ? OR career IS NULL)', [code, name, semester_id, career || null]);
+  const existing = await queryOne('SELECT id FROM subjects WHERE UPPER(code) = UPPER(?) AND UPPER(name) = UPPER(?) AND semester_id = ?', [code, name, semester_id]);
   if (existing) return res.status(409).json({ error: 'Esta materia ya existe en el semestre' });
-  const id = await execute('INSERT INTO subjects (code, name, subject_type, semester_id, career) VALUES (?, ?, ?, ?, ?)', [code, name, subject_type || 'Teórica', semester_id, career || null]);
+  const id = await execute('INSERT INTO subjects (code, name, subject_type, semester_id) VALUES (?, ?, ?, ?)', [code, name, subject_type || 'Teórica', semester_id]);
+  if (career) {
+    try {
+      await execute('INSERT IGNORE INTO global_subjects (code, name, career) VALUES (?, ?, ?)', [code, name, career]);
+      await execute('UPDATE global_subjects SET career = ? WHERE code = ? AND (career IS NULL OR career = "")', [career, code]);
+    } catch (e) {}
+  }
   res.status(201).json(await queryOne('SELECT * FROM subjects WHERE id = ?', [id]));
 }));
 app.post('/api/subjects/bulk', asyncHandler(async (req, res) => {
@@ -222,9 +228,15 @@ app.post('/api/subjects/bulk', asyncHandler(async (req, res) => {
       let name = item.name?.trim() || null;
       let career = item.career?.trim() || null;
       if (!code) { const ext = extractCodeAndName(name); code = ext.code; name = ext.name; }
-      const existing = await queryOne('SELECT id FROM subjects WHERE UPPER(code) = UPPER(?) AND UPPER(name) = UPPER(?) AND semester_id = ? AND (career = ? OR career IS NULL)', [code, name, semester_id, career]);
+      const existing = await queryOne('SELECT id FROM subjects WHERE UPPER(code) = UPPER(?) AND UPPER(name) = UPPER(?) AND semester_id = ?', [code, name, semester_id]);
       if (existing) { results.push({ ...item, skipped: true }); continue; }
-      await execute('INSERT INTO subjects (code, name, subject_type, semester_id, career) VALUES (?, ?, ?, ?, ?)', [code, name, item.subject_type || 'Teórica', semester_id, career]);
+      await execute('INSERT INTO subjects (code, name, subject_type, semester_id) VALUES (?, ?, ?, ?)', [code, name, item.subject_type || 'Teórica', semester_id]);
+      if (career) {
+        try {
+          await execute('INSERT IGNORE INTO global_subjects (code, name, career) VALUES (?, ?, ?)', [code, name, career]);
+          await execute('UPDATE global_subjects SET career = ? WHERE code = ? AND (career IS NULL OR career = "")', [career, code]);
+        } catch (e) {}
+      }
       results.push({ ...item, success: true });
     } catch (e) { results.push({ ...item, error: e.message }); }
   }
@@ -247,7 +259,10 @@ app.put('/api/subjects/:id', asyncHandler(async (req, res) => {
   if (code !== undefined) await execute('UPDATE subjects SET code = ? WHERE id = ?', [code, id]);
   if (name !== undefined) await execute('UPDATE subjects SET name = ? WHERE id = ?', [name, id]);
   if (subject_type !== undefined) await execute('UPDATE subjects SET subject_type = ? WHERE id = ?', [subject_type, id]);
-  if (career !== undefined) await execute('UPDATE subjects SET career = ? WHERE id = ?', [career, id]);
+  if (career !== undefined) {
+    const sub = await queryOne('SELECT code FROM subjects WHERE id = ?', [id]);
+    if (sub && sub.code) await execute('UPDATE global_subjects SET career = ? WHERE code = ?', [career, sub.code]);
+  }
   if (completed !== undefined) await execute('UPDATE subjects SET completed = ? WHERE id = ?', [!!completed, id]);
   res.json(await queryOne('SELECT * FROM subjects WHERE id = ?', [id]));
 }));
