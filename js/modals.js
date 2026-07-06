@@ -1793,8 +1793,8 @@ const Modals = {
         // Reset fields
         document.getElementById('input-new-session-date').value = '';
         ['input-new-session-start', 'input-new-session-end'].forEach(id => this.convertToTimeSelect(id));
-        document.getElementById('avail-selected-display').style.display = 'none';
-        document.getElementById('avail-selected-display').textContent = '';
+        const availDisplay = document.getElementById('avail-selected-display');
+        if (availDisplay) { availDisplay.style.display = 'none'; availDisplay.textContent = ''; }
         const hitoEl = document.getElementById('input-new-session-hito');
         if (hitoEl) hitoEl.value = '';
         const notesEl = document.getElementById('input-new-session-notes');
@@ -1941,6 +1941,7 @@ const Modals = {
                     else if (status === 'afternoon_busy') avail = ' — Mañana libre, tarde ocupada';
                     else avail = ' — Día libre';
                     const display = document.getElementById('avail-selected-display');
+                    if (!display) return;
                     display.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:-2px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> ${diaName.charAt(0).toUpperCase() + diaName.slice(1)} ${day} de ${monthNames[m-1]} de ${y}${avail}`;
                     display.style.display = 'block';
 

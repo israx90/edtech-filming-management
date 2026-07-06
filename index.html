@@ -884,9 +884,11 @@ PSI-220 Psicología General,Psicología"></textarea>
                 <label for="input-new-session-notes">Notas</label>
                 <textarea id="input-new-session-notes" class="input textarea" rows="3" placeholder="Observaciones de la sesión..."></textarea>
             </div>
+            <div id="avail-selected-display" style="display:none; font-size:12px; padding:8px 12px; background:var(--bg-tertiary); border-radius:6px; color:var(--text-secondary); margin-top:4px;"></div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" data-close-modal>Cancelar</button>
+            <div id="add-session-error" style="display:none; color:var(--red); font-size:12px;"></div>
             <button class="btn btn-primary" id="btn-save-session">Guardar Sesión</button>
         </div>
     </div>
