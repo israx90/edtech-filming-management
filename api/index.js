@@ -314,11 +314,11 @@ app.post('/api/assignments', asyncHandler(async (req, res) => {
   const { teacher_name, phone, subject_id, drive_link, script_status, session, sede, flight_ticket_path, pending_teacher_id } = req.body;
   const aid = await execute(
     'INSERT INTO filming_assignments (teacher_name, phone, subject_id, drive_link, script_status, sede, flight_ticket_path) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [teacher_name, phone, subject_id, drive_link, script_status || 'not_uploaded', sede || 'La Paz', flight_ticket_path]
+    [teacher_name, phone ?? null, subject_id, drive_link ?? null, script_status || 'not_uploaded', sede || 'La Paz', flight_ticket_path ?? null]
   );
   if (session?.session_date && session?.start_time && session?.end_time) {
     await execute('INSERT INTO recording_sessions (assignment_id, session_date, start_time, end_time, hito_reached, notes, staff_1_id, staff_2_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [aid, session.session_date, session.start_time, session.end_time, session.hito_reached || null, session.notes || null, req.body.staff_1_id, req.body.staff_2_id]);
+      [aid, session.session_date, session.start_time, session.end_time, session.hito_reached || null, session.notes || null, req.body.staff_1_id ?? null, req.body.staff_2_id ?? null]);
     if (session.hito_reached) await execute('UPDATE filming_assignments SET last_hito_reached = ? WHERE id = ?', [session.hito_reached, aid]);
   }
   const result = await queryOne('SELECT fa.*, s.code as subject_code, s.name as subject_name FROM filming_assignments fa JOIN subjects s ON s.id = fa.subject_id WHERE fa.id = ?', [aid]);
