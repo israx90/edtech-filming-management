@@ -8,6 +8,7 @@ const Calendar = {
     sessions: [],
     closedWeeks: [],
     reservations: [],
+    _initialized: false,
 
     // Undo stack: [{type, data, restoreFn}]
     undoStack: [],
@@ -63,6 +64,8 @@ const Calendar = {
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
 
     init() {
+        if (this._initialized) return;
+        this._initialized = true;
         document.getElementById('btn-prev-month').addEventListener('click', () => this.changeMonth(-1));
         document.getElementById('btn-next-month').addEventListener('click', () => this.changeMonth(1));
         document.getElementById('btn-today').addEventListener('click', () => {

@@ -6,6 +6,7 @@ const App = {
     currentView: 'calendar',
     activeSemester: null,
     user: null,
+    _started: false,
 
     async init() {
         // Check Auth
@@ -45,6 +46,8 @@ const App = {
     async startApp() {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app-wrapper').style.display = 'block';
+        if (this._started) return;  // prevent double init (e.g. token + manual login)
+        this._started = true;
         
         // (Migration is handled differently in Node.js)
         
@@ -634,14 +637,66 @@ const Goals = {
     },
 
     async deleteSubject(id) {
+        const subject = this.subjects.find(s => s.id === id);
+        if (!subject) return;
+
         Calendar.showConfirm({
             title: 'Eliminar Materia',
             message: '¿Eliminar esta materia? Si tiene filmaciones asignadas también se eliminarán.'
         }, async () => {
-            await API.del(`/subjects/${id}`);
-            showToast('Materia eliminada', 'success');
-            this.refresh();
-            Dashboard.refresh();
+            // Optimistic removal from UI
+            this.subjects = this.subjects.filter(s => s.id !== id);
+            this.render();
+
+            let undone = false;
+            let deleteTimer = null;
+
+            // Show undo toast
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast toast-warning toast-undo';
+            toast.style.cssText = 'display:flex;align-items:center;gap:10px;min-width:280px;';
+            toast.innerHTML = `
+                <span style="flex:1">Materia eliminada</span>
+                <button id="undo-delete-${id}" style="background:rgba(255,255,255,0.2);border:none;color:inherit;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;">↩ Deshacer</button>
+            `;
+            container.appendChild(toast);
+
+            const cleanup = () => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            };
+
+            // Undo button handler
+            document.getElementById(`undo-delete-${id}`)?.addEventListener('click', async () => {
+                undone = true;
+                clearTimeout(deleteTimer);
+                cleanup();
+                // Re-create the subject
+                await API.post('/subjects', {
+                    code: subject.code,
+                    name: subject.name,
+                    subject_type: subject.subject_type || 'Teórica',
+                    career: subject.career || '',
+                    semester_id: App.activeSemester.id
+                });
+                showToast('Materia restaurada', 'success');
+                await this.refresh();
+                Dashboard.refresh();
+            });
+
+            // Auto-delete after 6 seconds
+            deleteTimer = setTimeout(async () => {
+                if (!undone) {
+                    cleanup();
+                    await API.del(`/subjects/${id}`);
+                    Dashboard.refresh();
+                }
+            }, 6000);
+
+            // Auto-hide toast after 6s
+            setTimeout(cleanup, 6000);
         });
     },
 

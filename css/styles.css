@@ -597,6 +597,7 @@ input[type="time"]:hover { background-image: url("data:image/svg+xml,%3Csvg xmln
 .toast.toast-success { border-left: 3px solid var(--green); }
 .toast.toast-error { border-left: 3px solid var(--red); }
 .toast.toast-info { border-left: 3px solid var(--accent); }
+.toast.toast-warning { border-left: 3px solid var(--amber); }
 
 @keyframes slideInToast { from { transform: translateX(100%); opacity: 0; } to { transform: none; opacity: 1; } }
 

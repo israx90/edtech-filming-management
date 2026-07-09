@@ -4,8 +4,11 @@
 
 const Modals = {
     currentAssignmentId: null,
+    _initialized: false,
 
     init() {
+        if (this._initialized) return;
+        this._initialized = true;
         // Close modal on overlay click or close buttons
         document.getElementById('modal-overlay').addEventListener('click', () => this.closeAll());
         document.querySelectorAll('[data-close-modal]').forEach(btn => {
