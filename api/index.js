@@ -189,7 +189,7 @@ app.get('/api/subjects', asyncHandler(async (req, res) => {
   }
   res.json(await queryAll(`
     SELECT s.*,
-           gs.career AS career,
+           MAX(gs.career) AS career,
            fa.id as assignment_id, fa.status as assignment_status,
            fa.last_hito_reached, fa.teacher_name, fa.script_status, fa.drive_link
     FROM subjects s
@@ -201,6 +201,7 @@ app.get('/api/subjects', asyncHandler(async (req, res) => {
     )
     LEFT JOIN global_subjects gs ON UPPER(TRIM(gs.code)) = UPPER(TRIM(s.code))
     WHERE s.semester_id = ?
+    GROUP BY s.id, fa.id, fa.status, fa.last_hito_reached, fa.teacher_name, fa.script_status, fa.drive_link
     ORDER BY s.code ASC
   `, [semId]));
 
