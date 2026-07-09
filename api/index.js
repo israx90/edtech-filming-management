@@ -314,6 +314,31 @@ app.post('/api/subjects/deduplicate', asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Duplicados eliminados correctamente' });
 }));
 
+app.post('/api/emergency-restore', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAdmin(user, res)) return;
+  const { semester_id } = req.body;
+  
+  // 1. Recreate 'La vía voluntaria notarial'
+  const newSubjectId = await execute(
+    'INSERT INTO subjects (code, name, subject_type, career, semester_id) VALUES (?, ?, ?, ?, ?)',
+    ['EXT', 'La vía voluntaria notarial', 'Teórica', 'Academy', semester_id]
+  );
+  
+  // 2. Find BlockChain subject
+  const bc = await queryOne('SELECT id FROM subjects WHERE name = "BlockChain" AND semester_id = ? ORDER BY id DESC LIMIT 1', [semester_id]);
+  if (bc) {
+    // 3. Move the oldest assignment from BlockChain to La via
+    // Assuming La via's assignment was created before BlockChain's (or we just move one of them)
+    const assignments = await queryAll('SELECT id FROM filming_assignments WHERE subject_id = ? ORDER BY id ASC', [bc.id]);
+    if (assignments.length > 1) {
+      // Move the first one back
+      await execute('UPDATE filming_assignments SET subject_id = ? WHERE id = ?', [newSubjectId, assignments[0].id]);
+    }
+  }
+  res.json({ success: true, restored_id: newSubjectId });
+}));
+
 // --- ASSIGNMENTS ---
 app.get('/api/assignments', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
