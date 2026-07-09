@@ -299,37 +299,65 @@ const Modals = {
 
     limitTimeOptions(dateStr) {
         const status = this._availData[dateStr] || 'free';
-        // Currently the availability grid is only used in Add Session, but let's apply generically if inputs exist
-        const startIds = ['input-new-session-start', 'input-session-start', 'input-session2-start'];
-        const endIds = ['input-new-session-end', 'input-session-end', 'input-session2-end'];
 
-        [...startIds, ...endIds].forEach(id => {
-            const select = document.getElementById(id);
-            if (!select || select.tagName !== 'SELECT') return;
-            
-            // Only affect the select if it's currently visible/active in a modal
+        // Determine allowed time range based on availability
+        let minTime = '08:00';
+        let maxTime = '20:00';
+        let defaultStart = '08:00';
+        let defaultEnd = '10:00';
+
+        if (status === 'morning_busy') {
+            minTime = '13:00'; defaultStart = '13:00'; defaultEnd = '15:00';
+        } else if (status === 'afternoon_busy') {
+            maxTime = '13:00'; defaultStart = '08:00'; defaultEnd = '10:00';
+        }
+
+        const startIds = ['input-new-session-start', 'input-session-start', 'input-session2-start'];
+        const endIds   = ['input-new-session-end',   'input-session-end',   'input-session2-end'];
+
+        const applyToSelect = (select, isEnd) => {
+            if (!select) return;
             const modal = select.closest('.modal');
             if (modal && !modal.classList.contains('active')) return;
 
-            const currentVal = select.value;
-            let firstValid = null;
-
-            Array.from(select.options).forEach(o => {
-                const t = o.value;
-                o.disabled = false;
-                if (status === 'full') o.disabled = true;
-                else if (status === 'morning_busy' && t < '13:00') o.disabled = true;
-                else if (status === 'afternoon_busy' && t >= '13:00') o.disabled = true;
-
-                if (!o.disabled && !firstValid) firstValid = t;
-            });
-
-            // Adjust selection if current is disabled
-            const currentOpt = Array.from(select.options).find(o => o.value === currentVal);
-            if (currentOpt && currentOpt.disabled && firstValid) {
-                select.value = firstValid;
+            if (select.tagName === 'SELECT') {
+                const currentVal = select.value;
+                let firstValid = null;
+                Array.from(select.options).forEach(o => {
+                    o.disabled = false;
+                    o.style.display = '';
+                    if (status === 'full') {
+                        o.disabled = true;
+                    } else if (o.value < minTime || o.value > maxTime) {
+                        o.disabled = true;
+                    }
+                    if (!o.disabled && !firstValid) firstValid = o.value;
+                });
+                const currentOpt = Array.from(select.options).find(o => o.value === currentVal);
+                if (currentOpt && currentOpt.disabled && firstValid) {
+                    select.value = firstValid;
+                }
+                // Set sensible defaults
+                if (!currentVal || (currentOpt && currentOpt.disabled)) {
+                    select.value = isEnd ? defaultEnd : defaultStart;
+                }
+            } else if (select.tagName === 'INPUT' && select.type === 'time') {
+                select.min = minTime;
+                select.max = maxTime;
+                if (status === 'full') {
+                    select.disabled = true;
+                } else {
+                    select.disabled = false;
+                    const cur = select.value;
+                    if (!cur || cur < minTime || cur > maxTime) {
+                        select.value = isEnd ? defaultEnd : defaultStart;
+                    }
+                }
             }
-        });
+        };
+
+        startIds.forEach(id => applyToSelect(document.getElementById(id), false));
+        endIds.forEach(id => applyToSelect(document.getElementById(id), true));
     },
 
     // ===== SEMESTER MANAGER =====
@@ -1816,7 +1844,7 @@ const Modals = {
         this.closeAll();
         this.currentAssignmentId = assignmentId;
         this.open('modal-add-session');
-        this.initDatePickers('modal-add-session');
+        // Note: date picker is now a visual availability calendar, no initDatePickers needed
 
         await this._renderAvailCalendar();
     },
@@ -1875,63 +1903,77 @@ const Modals = {
 
             const dayOfWeek = new Date(dateStr + 'T12:00:00').getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-            
+
             const monthDay = dateStr.substring(5);
             const holidayName = (typeof Calendar !== 'undefined' && Calendar.HOLIDAYS)
                 ? (Calendar.HOLIDAYS[dateStr] || Calendar.HOLIDAYS[monthDay] || null)
                 : null;
 
-            const cell = document.createElement('div');
-            const pointerEvents = (isPast || isWeekend) ? 'none' : 'auto';
+            // A day is non-selectable if: past, weekend, holiday, or fully booked
+            const isBlocked = isPast || isWeekend || !!holidayName || status === 'full';
 
+            const cell = document.createElement('div');
             cell.style.cssText = `
                 border-radius: 6px;
                 padding: 5px 2px;
                 font-size: 12px;
                 font-weight: 600;
-                cursor: ${(isPast || isWeekend) ? 'default' : 'pointer'};
-                opacity: ${(isPast || isWeekend) ? '0.35' : '1'};
+                cursor: ${isBlocked ? 'default' : 'pointer'};
+                opacity: ${(isPast || isWeekend) ? '0.3' : (isBlocked ? '0.55' : '1')};
                 position: relative;
                 overflow: hidden;
-                pointer-events: ${pointerEvents};
-                transition: transform 0.1s, box-shadow 0.1s;
+                pointer-events: ${isBlocked ? 'none' : 'auto'};
+                transition: transform 0.15s, box-shadow 0.15s;
                 border: 2px solid ${isSelected ? '#fff' : 'transparent'};
                 box-shadow: ${isSelected ? '0 0 0 2px var(--accent)' : 'none'};
+                text-align: center;
             `;
 
             // Color background based on status
             if (isWeekend) {
-                cell.style.background = 'rgba(255,255,255,0.05)';
+                cell.style.background = 'rgba(255,255,255,0.04)';
                 cell.style.color = 'var(--text-muted)';
             } else if (holidayName) {
-                cell.style.background = 'rgba(245,158,11,0.2)';
+                cell.style.background = 'rgba(245,158,11,0.18)';
                 cell.style.color = 'var(--amber)';
-                cell.title = holidayName;
+                cell.title = `🎉 Feriado: ${holidayName}`;
             } else if (status === 'full') {
-                cell.style.background = 'rgba(239,68,68,0.25)';
+                cell.style.background = 'rgba(239,68,68,0.22)';
                 cell.style.color = '#ef4444';
+                cell.title = 'Día completo — sin disponibilidad';
             } else if (status === 'morning_busy') {
-                // Left half red, right half green
+                // Left half red (morning occupied), right half green (afternoon free)
                 cell.style.background = 'linear-gradient(to right, rgba(239,68,68,0.3) 50%, rgba(34,197,94,0.25) 50%)';
                 cell.style.color = 'var(--text-primary)';
+                cell.title = 'Mañana ocupada — Tarde libre (desde 13:00)';
             } else if (status === 'afternoon_busy') {
-                // Left half green, right half amber
+                // Left half green (morning free), right half amber (afternoon occupied)
                 cell.style.background = 'linear-gradient(to right, rgba(34,197,94,0.25) 50%, rgba(245,158,11,0.3) 50%)';
                 cell.style.color = 'var(--text-primary)';
-            } else {
+                cell.title = 'Mañana libre — Tarde ocupada (hasta 13:00)';
+            } else if (!isPast) {
                 // free
                 cell.style.background = 'rgba(34,197,94,0.15)';
                 cell.style.color = '#22c55e';
+                cell.title = 'Día libre';
+            } else {
+                cell.style.background = 'transparent';
+                cell.style.color = 'var(--text-muted)';
             }
 
             cell.textContent = day;
 
-            if (!isPast) {
+            // Only add interaction for non-blocked days
+            if (!isBlocked) {
                 cell.addEventListener('mouseenter', () => {
-                    if (dateStr !== selectedDate) cell.style.transform = 'scale(1.1)';
+                    if (dateStr !== selectedDate) {
+                        cell.style.transform = 'scale(1.12)';
+                        cell.style.zIndex = '2';
+                    }
                 });
                 cell.addEventListener('mouseleave', () => {
                     cell.style.transform = 'scale(1)';
+                    cell.style.zIndex = '';
                 });
                 cell.addEventListener('click', () => {
                     document.getElementById('input-new-session-date').value = dateStr;
@@ -1941,24 +1983,20 @@ const Modals = {
                     const dObj = new Date(dateStr + 'T12:00:00');
                     const diaName = dias[dObj.getDay()];
                     let avail = '';
-                    if (status === 'full') avail = ' — Día completo';
-                    else if (status === 'morning_busy') avail = ' — Mañana ocupada, tarde libre';
-                    else if (status === 'afternoon_busy') avail = ' — Mañana libre, tarde ocupada';
-                    else avail = ' — Día libre';
+                    let availColor = 'var(--text-secondary)';
+                    if (status === 'morning_busy') { avail = ' — Mañana ocupada · Tarde libre (13:00–20:00)'; availColor = '#22c55e'; }
+                    else if (status === 'afternoon_busy') { avail = ' — Mañana libre (08:00–13:00) · Tarde ocupada'; availColor = '#f59e0b'; }
+                    else { avail = ' — Día completamente libre'; availColor = '#22c55e'; }
+
                     const display = document.getElementById('avail-selected-display');
                     if (!display) return;
-                    display.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:-2px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> ${diaName.charAt(0).toUpperCase() + diaName.slice(1)} ${day} de ${monthNames[m-1]} de ${y}${avail}`;
+                    display.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg><strong>${diaName.charAt(0).toUpperCase() + diaName.slice(1)} ${day} de ${monthNames[m-1]} de ${y}</strong>${avail}`;
                     display.style.display = 'block';
-
-                    if (holidayName) {
-                        display.textContent += ` (Feriado: ${holidayName})`;
-                        display.style.color = 'var(--amber)';
-                    } else {
-                        display.style.color = 'var(--text-secondary)';
-                    }
+                    display.style.color = availColor;
 
                     // Re-render to highlight selection
                     this._renderAvailCalendar();
+                    // Apply time restrictions based on availability
                     this.limitTimeOptions(dateStr);
                 });
             }

@@ -467,6 +467,7 @@ input[type="time"]:hover { background-image: url("data:image/svg+xml,%3Csvg xmln
 }
 .modal.active { opacity: 1; pointer-events: auto; transform: translateX(-50%) scale(1); }
 .modal.modal-lg { width: 640px; }
+.modal.modal-wide { width: 520px; }
 
 .modal-header {
     display: flex; justify-content: space-between; align-items: center;
@@ -1790,6 +1791,74 @@ input[type="time"]:hover { background-image: url("data:image/svg+xml,%3Csvg xmln
 .dp-day.dp-today { font-weight: 700; color: var(--accent); border: 1px solid var(--accent); }
 .dp-day.dp-selected { background: var(--accent) !important; color: #fff !important; font-weight: 700; }
 .dp-day.dp-weekend:not(.dp-other) { color: var(--text-muted); }
+
+/* =========================================
+   AVAILABILITY CALENDAR (Add Session Modal)
+   ========================================= */
+.avail-cal-container {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 14px 14px 10px;
+    margin-bottom: 14px;
+}
+.avail-cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+.avail-cal-title-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.02em;
+}
+.avail-cal-nav {
+    background: none;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 2px 10px 4px;
+    transition: background 0.15s, color 0.15s;
+}
+.avail-cal-nav:hover {
+    background: var(--accent-bg);
+    color: var(--accent);
+    border-color: var(--accent);
+}
+.avail-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    text-align: center;
+}
+.avail-cal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-light);
+}
+.avail-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+.avail-dot {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
 
 /* =========================================
    MOBILE CALENDAR (STACKED BLOCKS)
