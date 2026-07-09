@@ -402,6 +402,10 @@
             <div class="admin-tabs">
                 <button class="admin-tab-btn active" id="admin-tab-users">Usuarios</button>
                 <button class="admin-tab-btn" id="admin-tab-subjects">Base de Materias</button>
+                <button class="admin-tab-btn" id="admin-tab-holidays">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Feriados
+                </button>
                 <button class="admin-tab-btn" id="admin-tab-log">Log de Actividad</button>
             </div>
 
@@ -485,6 +489,59 @@ PSI-220 Psicología General,Psicología"></textarea>
                         <span>Código</span><span>Materia</span><span>Carrera</span><span></span>
                     </div>
                     <div id="global-subjects-list"></div>
+                </div>
+            </div>
+
+            <!-- Tab: Holidays -->
+            <div class="admin-tab-panel" id="admin-panel-holidays" style="display:none;">
+                <div class="admin-section">
+                    <h4 class="admin-section-title">Agregar Feriado</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px; line-height:1.5;">
+                        Usa formato <code>MM-DD</code> para feriados <strong>fijos</strong> (aplican cada año) o <code>YYYY-MM-DD</code> para feriados <strong>móviles</strong> (solo ese año).
+                    </p>
+                    <div class="form-grid" style="grid-template-columns: 1fr 2fr auto auto; gap:12px; align-items:end;">
+                        <div class="form-row">
+                            <label for="holiday-date-key">Fecha</label>
+                            <input type="text" id="holiday-date-key" class="input" placeholder="MM-DD o YYYY-MM-DD">
+                        </div>
+                        <div class="form-row">
+                            <label for="holiday-name">Nombre del Feriado</label>
+                            <input type="text" id="holiday-name" class="input" placeholder="Ej: Día del Trabajo">
+                        </div>
+                        <div class="form-row">
+                            <label for="holiday-type">Tipo</label>
+                            <select id="holiday-type" class="input select">
+                                <option value="0">Móvil (ese año)</option>
+                                <option value="1">Fijo (cada año)</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" id="btn-add-holiday" style="height:38px;">+ Agregar</button>
+                    </div>
+                    <!-- Quick-date helper -->
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                        <span style="font-size:11px; color:var(--text-muted); align-self:center;">Acceso rápido:</span>
+                        <button class="btn-sm btn-ghost" onclick="AdminPanel.prefillHoliday('fixed')">🔁 Feriado Fijo</button>
+                        <button class="btn-sm btn-ghost" onclick="AdminPanel.prefillHoliday('mobile')">📅 Feriado Móvil</button>
+                    </div>
+                </div>
+
+                <div class="admin-section" style="margin-top:24px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                        <h4 class="admin-section-title" style="margin:0;">Feriados Registrados (<span id="holidays-count">0</span>)</h4>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn-sm btn-ghost" id="btn-holidays-filter-all" onclick="AdminPanel.filterHolidays('all')" style="font-weight:600;">Todos</button>
+                            <button class="btn-sm btn-ghost" id="btn-holidays-filter-fixed" onclick="AdminPanel.filterHolidays('fixed')">🔁 Fijos</button>
+                            <button class="btn-sm btn-ghost" id="btn-holidays-filter-mobile" onclick="AdminPanel.filterHolidays('mobile')">📅 Móviles</button>
+                        </div>
+                    </div>
+                    <!-- Header Row -->
+                    <div style="display:grid; grid-template-columns:70px 110px 1fr 48px; gap:0; padding:6px 12px; background:var(--bg-tertiary); border-radius:6px 6px 0 0; border:1px solid var(--border-light); border-bottom:none;">
+                        <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Tipo</span>
+                        <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Fecha</span>
+                        <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Nombre</span>
+                        <span></span>
+                    </div>
+                    <div id="holidays-list" style="border:1px solid var(--border-light); border-radius:0 0 6px 6px; max-height:480px; overflow-y:auto;"></div>
                 </div>
             </div>
 

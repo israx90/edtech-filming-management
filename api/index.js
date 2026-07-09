@@ -30,7 +30,70 @@ const asyncHandler = fn => (req, res, next) => {
 (async () => {
   try {
     await execute("ALTER TABLE recording_sessions ADD COLUMN IF NOT EXISTS is_displacement TINYINT(1) DEFAULT 0");
-  } catch (e) { /* Column already exists or DB not ready yet */ }
+  } catch (e) { /* Column already exists */ }
+
+  // Create holidays table
+  try {
+    await execute(`
+      CREATE TABLE IF NOT EXISTS holidays (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        date_key VARCHAR(10) NOT NULL UNIQUE,
+        name VARCHAR(200) NOT NULL,
+        is_fixed TINYINT(1) DEFAULT 0
+      )
+    `);
+  } catch (e) { console.error('[Migration] holidays table:', e.message); }
+
+  // Seed default Bolivian holidays if the table is empty
+  try {
+    const count = await queryOne('SELECT COUNT(*) as c FROM holidays');
+    if (parseInt(count?.c || 0) === 0) {
+      const defaults = [
+        // Fijos (MM-DD)
+        { date_key: '01-01', name: 'Año Nuevo',                      is_fixed: 1 },
+        { date_key: '01-22', name: 'Día del Estado Plur.',            is_fixed: 1 },
+        { date_key: '02-10', name: 'Efeméride de Oruro',              is_fixed: 1 },
+        { date_key: '04-15', name: 'Efeméride de Tarija',             is_fixed: 1 },
+        { date_key: '05-01', name: 'Día del Trabajo',                 is_fixed: 1 },
+        { date_key: '05-25', name: 'Efeméride Chuquisaca',            is_fixed: 1 },
+        { date_key: '06-21', name: 'Año Nuevo Andino',                is_fixed: 1 },
+        { date_key: '07-16', name: 'Efeméride de La Paz',             is_fixed: 1 },
+        { date_key: '08-06', name: 'Independencia',                   is_fixed: 1 },
+        { date_key: '09-14', name: 'Efeméride Cochabamba',            is_fixed: 1 },
+        { date_key: '09-24', name: 'Efeméride Santa Cruz',            is_fixed: 1 },
+        { date_key: '10-01', name: 'Efeméride de Pando',              is_fixed: 1 },
+        { date_key: '11-02', name: 'Día de los Difuntos',             is_fixed: 1 },
+        { date_key: '11-10', name: 'Efeméride de Potosí',             is_fixed: 1 },
+        { date_key: '11-18', name: 'Efeméride de Beni',               is_fixed: 1 },
+        { date_key: '12-25', name: 'Navidad',                         is_fixed: 1 },
+        // Móviles 2025
+        { date_key: '2025-03-03', name: 'Carnaval',          is_fixed: 0 },
+        { date_key: '2025-03-04', name: 'Carnaval',          is_fixed: 0 },
+        { date_key: '2025-04-17', name: 'Jueves Santo',      is_fixed: 0 },
+        { date_key: '2025-04-18', name: 'Viernes Santo',     is_fixed: 0 },
+        { date_key: '2025-06-19', name: 'Corpus Christi',    is_fixed: 0 },
+        // Móviles 2026
+        { date_key: '2026-02-16', name: 'Carnaval',                          is_fixed: 0 },
+        { date_key: '2026-02-17', name: 'Carnaval',                          is_fixed: 0 },
+        { date_key: '2026-04-03', name: 'Viernes Santo',                     is_fixed: 0 },
+        { date_key: '2026-01-23', name: 'Día del Estado Plur. (Traslado)',   is_fixed: 0 },
+        { date_key: '2026-06-04', name: 'Corpus Christi',                    is_fixed: 0 },
+        { date_key: '2026-06-05', name: 'Feriado Largo (Corpus Christi)',    is_fixed: 0 },
+        { date_key: '2026-06-22', name: 'Año Nuevo Andino (Traslado)',       is_fixed: 0 },
+        { date_key: '2026-08-07', name: 'Feriado Largo (Independencia)',     is_fixed: 0 },
+        // Móviles 2027
+        { date_key: '2027-02-08', name: 'Carnaval',          is_fixed: 0 },
+        { date_key: '2027-02-09', name: 'Carnaval',          is_fixed: 0 },
+        { date_key: '2027-03-25', name: 'Jueves Santo',      is_fixed: 0 },
+        { date_key: '2027-03-26', name: 'Viernes Santo',     is_fixed: 0 },
+        { date_key: '2027-05-27', name: 'Corpus Christi',    is_fixed: 0 },
+      ];
+      for (const h of defaults) {
+        try { await execute('INSERT IGNORE INTO holidays (date_key, name, is_fixed) VALUES (?, ?, ?)', [h.date_key, h.name, h.is_fixed]); } catch(e) {}
+      }
+      console.log('[Seed] Feriados bolivianos insertados por defecto.');
+    }
+  } catch (e) { console.error('[Seed] holidays:', e.message); }
 })();
 
 // --- HEALTH CHECK (diagnóstico) ---
@@ -851,6 +914,48 @@ app.get('/api/availability/:date', asyncHandler(async (req, res) => {
     slots.push({ start: ss, end: se, available: !occ, session: occ || null });
   }
   res.json({ closed: false, slots, existingSessions: existing });
+}));
+
+// ================================================
+// Holidays (Feriados)
+// ================================================
+app.get('/api/holidays', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAuth(user, res)) return;
+  const rows = await queryAll('SELECT * FROM holidays ORDER BY is_fixed DESC, date_key ASC');
+  res.json(rows);
+}));
+
+app.post('/api/holidays', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAdmin(user, res)) return;
+  const { date_key, name, is_fixed } = req.body;
+  if (!date_key || !name) return res.status(400).json({ error: 'date_key y name son requeridos' });
+  // Validate format: MM-DD or YYYY-MM-DD
+  const fixedPattern = /^\d{2}-\d{2}$/;
+  const mobilePattern = /^\d{4}-\d{2}-\d{2}$/;
+  if (!fixedPattern.test(date_key) && !mobilePattern.test(date_key)) {
+    return res.status(400).json({ error: 'Formato de fecha inválido. Usa MM-DD (fijo) o YYYY-MM-DD (móvil)' });
+  }
+  try {
+    const id = await execute('INSERT INTO holidays (date_key, name, is_fixed) VALUES (?, ?, ?)', [date_key, name.trim(), is_fixed ? 1 : 0]);
+    await logAction(user, `Agregó feriado "${name}" (${date_key})`, 'holiday', id);
+    res.status(201).json(await queryOne('SELECT * FROM holidays WHERE id = ?', [id]));
+  } catch (e) {
+    if (e.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Ya existe un feriado con esa fecha' });
+    throw e;
+  }
+}));
+
+app.delete('/api/holidays/:id', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAdmin(user, res)) return;
+  const id = parseInt(req.params.id);
+  const h = await queryOne('SELECT * FROM holidays WHERE id = ?', [id]);
+  if (!h) return res.status(404).json({ error: 'Feriado no encontrado' });
+  await execute('DELETE FROM holidays WHERE id = ?', [id]);
+  await logAction(user, `Eliminó feriado "${h.name}" (${h.date_key})`, 'holiday', id);
+  res.json({ success: true });
 }));
 
 // Error handler

@@ -13,52 +13,8 @@ const Calendar = {
     // Undo stack: [{type, data, restoreFn}]
     undoStack: [],
 
-    HOLIDAYS: {
-        // Fijos
-        '01-01': 'Año Nuevo',
-        '01-22': 'Día del Estado Plur.',
-        '02-10': 'Efeméride de Oruro',
-        '04-15': 'Efeméride de Tarija',
-        '05-01': 'Día del Trabajo',
-        '05-25': 'Efeméride Chuquisaca',
-        '06-21': 'Año Nuevo Andino',
-        '07-16': 'Efeméride de La Paz',
-        '08-06': 'Independencia',
-        '09-14': 'Efeméride Cochabamba',
-        '09-24': 'Efeméride Santa Cruz',
-        '10-01': 'Efeméride de Pando',
-        '11-02': 'Día de los Difuntos',
-        '11-10': 'Efeméride de Potosí',
-        '11-18': 'Efeméride de Beni',
-        '12-25': 'Navidad',
-        // Móviles — Carnaval 2025
-        '2025-03-03': 'Carnaval',
-        '2025-03-04': 'Carnaval',
-        // Móviles — Semana Santa 2025
-        '2025-04-17': 'Jueves Santo',
-        '2025-04-18': 'Viernes Santo',
-        // Móviles — Corpus Christi 2025
-        '2025-06-19': 'Corpus Christi',
-        // Móviles — Carnaval 2026
-        '2026-02-16': 'Carnaval',
-        '2026-02-17': 'Carnaval',
-        // Móviles — Semana Santa 2026
-        '2026-04-03': 'Viernes Santo',
-        // Feriados extendidos 2026 (DS 5521)
-        '2026-01-23': 'Día del Estado Plur. (Traslado)',
-        '2026-06-04': 'Corpus Christi',
-        '2026-06-05': 'Feriado Largo (Corpus Christi)',
-        '2026-06-22': 'Año Nuevo Andino (Traslado)',
-        '2026-08-07': 'Feriado Largo (Independencia)',
-        // Móviles — Carnaval 2027
-        '2027-02-08': 'Carnaval',
-        '2027-02-09': 'Carnaval',
-        // Móviles — Semana Santa 2027
-        '2027-03-25': 'Jueves Santo',
-        '2027-03-26': 'Viernes Santo',
-        // Móviles — Corpus Christi 2027
-        '2027-05-27': 'Corpus Christi',
-    },
+    // Holidays: loaded dynamically from /api/holidays
+    HOLIDAYS: {},
 
     MONTH_NAMES: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
@@ -99,16 +55,23 @@ const Calendar = {
         document.getElementById('calendar-month-title').textContent =
             `${this.MONTH_NAMES[this.currentMonth]} ${this.currentYear}`;
 
-        const [sessions, closedWeeks, reservations, meetingRequests] = await Promise.all([
+        const [sessions, closedWeeks, reservations, meetingRequests, holidays] = await Promise.all([
             API.get(`/sessions?month=${this.currentMonth + 1}&year=${this.currentYear}`),
             API.get('/closed-weeks'),
             API.get(`/reservations?month=${this.currentMonth + 1}&year=${this.currentYear}`),
-            App.user ? API.get(`/meeting-requests?status=pending`) : Promise.resolve([])
+            App.user ? API.get(`/meeting-requests?status=pending`) : Promise.resolve([]),
+            API.get('/holidays')
         ]);
         this.sessions = sessions;
         this.closedWeeks = closedWeeks;
         this.reservations = reservations;
         this.meetingRequests = meetingRequests || [];
+
+        // Rebuild HOLIDAYS lookup from DB data
+        this.HOLIDAYS = {};
+        if (Array.isArray(holidays)) {
+            holidays.forEach(h => { this.HOLIDAYS[h.date_key] = h.name; });
+        }
 
         // Update notification badge
         this.loadMeetingRequestsBadge(this.meetingRequests.length);
@@ -211,12 +174,7 @@ const Calendar = {
         cell.innerHTML = `<div class="cal-day-num"><span class="mobile-day-name">${dayName}</span> ${dayNum}</div>`;
 
         const monthDay = dateStr.substring(5);
-        let holidayName = this.HOLIDAYS[dateStr] || this.HOLIDAYS[monthDay];
-        
-        // Exclude fixed holidays that were moved in 2026
-        if (dateStr === '2026-01-22' || dateStr === '2026-06-21') {
-            holidayName = null;
-        }
+        const holidayName = this.HOLIDAYS[dateStr] || this.HOLIDAYS[monthDay];
 
         if (holidayName && !isOtherMonth) {
             cell.innerHTML += `<div class="cal-holiday-label" title="${holidayName}" style="font-size: 8.5px; font-weight: 700; color: #ff5e5e; background: rgba(255, 94, 94, 0.1); padding: 2px 4px; border-radius: 3px; margin: 2px 0; text-transform: uppercase; text-align: center; line-height: 1.1; display:flex; gap:3px; align-items:center; justify-content:center;">

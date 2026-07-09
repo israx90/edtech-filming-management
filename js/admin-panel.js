@@ -5,12 +5,15 @@
 const AdminPanel = {
     users: [],
     globalSubjects: [],
+    holidays: [],
+    holidaysFilter: 'all',
     log: [],
     activeTab: 'users',
 
     init() {
         document.getElementById('admin-tab-users')?.addEventListener('click', () => this.switchTab('users'));
         document.getElementById('admin-tab-subjects')?.addEventListener('click', () => this.switchTab('subjects'));
+        document.getElementById('admin-tab-holidays')?.addEventListener('click', () => this.switchTab('holidays'));
         document.getElementById('admin-tab-log')?.addEventListener('click', () => this.switchTab('log'));
 
         // User management
@@ -34,6 +37,13 @@ const AdminPanel = {
         // Global subjects
         document.getElementById('btn-add-global-subject')?.addEventListener('click', () => this.addGlobalSubject());
         document.getElementById('btn-import-global-subjects')?.addEventListener('click', () => this.importBulkSubjects());
+
+        // Holidays
+        document.getElementById('btn-add-holiday')?.addEventListener('click', () => this.addHoliday());
+        // Allow pressing Enter in holiday inputs
+        ['holiday-date-key', 'holiday-name'].forEach(id => {
+            document.getElementById(id)?.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.addHoliday(); });
+        });
     },
 
     // Generate a username from a full name: "Edson Israel Llanque" → "eillanque"
@@ -65,6 +75,7 @@ const AdminPanel = {
     async loadTab(tab) {
         if (tab === 'users') await this.loadUsers();
         if (tab === 'subjects') await this.loadGlobalSubjects();
+        if (tab === 'holidays') await this.loadHolidays();
         if (tab === 'log') await this.loadLog();
     },
 
@@ -301,9 +312,108 @@ _Por favor, guarda estos datos de forma segura._`;
                 </div>
             `;
         }).join('');
+    },
+
+    // ---- HOLIDAYS (FERIADOS) ----
+    async loadHolidays() {
+        this.holidays = await API.get('/holidays');
+        this.renderHolidays();
+    },
+
+    filterHolidays(filter) {
+        this.holidaysFilter = filter;
+        ['all', 'fixed', 'mobile'].forEach(f => {
+            const btn = document.getElementById(`btn-holidays-filter-${f}`);
+            if (btn) btn.style.fontWeight = f === filter ? '700' : '';
+        });
+        this.renderHolidays();
+    },
+
+    renderHolidays() {
+        const list = document.getElementById('holidays-list');
+        const countEl = document.getElementById('holidays-count');
+        if (!list) return;
+
+        let filtered = this.holidays || [];
+        if (this.holidaysFilter === 'fixed') filtered = filtered.filter(h => h.is_fixed);
+        if (this.holidaysFilter === 'mobile') filtered = filtered.filter(h => !h.is_fixed);
+
+        if (countEl) countEl.textContent = this.holidays.length;
+
+        if (filtered.length === 0) {
+            list.innerHTML = `<div class="empty-state" style="padding:24px 12px;"><p>No hay feriados registrados</p><span>Agrega uno usando el formulario de arriba</span></div>`;
+            return;
+        }
+
+        list.innerHTML = filtered.map((h, i) => {
+            const isFixed = h.is_fixed;
+            const typeBadge = isFixed
+                ? `<span title="Fijo: aplica cada año" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(96,165,250,0.15);color:#60a5fa;">🔁 Fijo</span>`
+                : `<span title="Móvil: solo ese año" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(167,139,250,0.15);color:#a78bfa;">📅 Móvil</span>`;
+            const bgStyle = i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-elevated)';
+            return `
+                <div style="display:grid;grid-template-columns:70px 110px 1fr 48px;gap:0;padding:9px 12px;background:${bgStyle};border-bottom:1px solid var(--border-light);align-items:center;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='${bgStyle}'">
+                    <div>${typeBadge}</div>
+                    <div style="font-family:monospace;font-size:12px;font-weight:600;color:var(--text-secondary);">${h.date_key}</div>
+                    <div style="font-size:13px;font-weight:500;color:var(--text-primary);">${h.name}</div>
+                    <div style="text-align:right;">
+                        <button class="btn-icon btn-danger-icon" onclick="AdminPanel.deleteHoliday(${h.id})" title="Eliminar feriado">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    async addHoliday() {
+        const dateKey = document.getElementById('holiday-date-key')?.value.trim();
+        const name = document.getElementById('holiday-name')?.value.trim();
+        const isFixed = document.getElementById('holiday-type')?.value === '1';
+
+        if (!dateKey || !name) return showToast('Fecha y nombre son requeridos', 'error');
+
+        const result = await API.post('/holidays', { date_key: dateKey, name, is_fixed: isFixed });
+        if (result.error) return showToast(result.error, 'error');
+
+        document.getElementById('holiday-date-key').value = '';
+        document.getElementById('holiday-name').value = '';
+        document.getElementById('holiday-type').value = '0';
+        showToast(`Feriado "${name}" agregado`, 'success');
+        await this.loadHolidays();
+    },
+
+    async deleteHoliday(id) {
+        const h = this.holidays.find(x => x.id === id);
+        Calendar.showConfirm({
+            title: 'Eliminar Feriado',
+            message: `¿Eliminar "${h?.name || 'este feriado'}" (${h?.date_key})? Dejará de mostrarse en el calendario.`
+        }, async () => {
+            const result = await API.del(`/holidays/${id}`);
+            if (result.error) return showToast(result.error, 'error');
+            showToast('Feriado eliminado', 'success');
+            await this.loadHolidays();
+        });
+    },
+
+    prefillHoliday(type) {
+        const dateInput = document.getElementById('holiday-date-key');
+        const typeSelect = document.getElementById('holiday-type');
+        if (!dateInput || !typeSelect) return;
+        if (type === 'fixed') {
+            dateInput.placeholder = 'MM-DD (ej: 12-25)';
+            typeSelect.value = '1';
+        } else {
+            const yyyy = new Date().getFullYear();
+            dateInput.placeholder = `YYYY-MM-DD (ej: ${yyyy}-02-16)`;
+            typeSelect.value = '0';
+        }
+        dateInput.focus();
+        showToast(type === 'fixed' ? 'Ingresa la fecha como MM-DD' : 'Ingresa la fecha como YYYY-MM-DD', 'info');
     }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => AdminPanel.init(), 200);
 });
+
