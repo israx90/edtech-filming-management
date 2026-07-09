@@ -294,11 +294,11 @@ app.post('/api/subjects/deduplicate', asyncHandler(async (req, res) => {
   const { semester_id } = req.body;
   if (!semester_id) return res.status(400).json({ error: 'semester_id es requerido' });
 
-  // Update orphaned assignments to point to the surviving subject (the one with lowest ID, which means t1.id > t2.id and we keep t2)
+  // Update orphaned assignments to point to the surviving subject
   await execute(`
     UPDATE filming_assignments fa
     JOIN subjects t1 ON fa.subject_id = t1.id
-    JOIN subjects t2 ON t1.code = t2.code AND t1.semester_id = t2.semester_id AND t1.id > t2.id
+    JOIN subjects t2 ON t1.code = t2.code AND t1.name = t2.name AND t1.semester_id = t2.semester_id AND t1.id > t2.id
     SET fa.subject_id = t2.id
     WHERE t1.semester_id = ?
   `, [semester_id]);
@@ -307,7 +307,7 @@ app.post('/api/subjects/deduplicate', asyncHandler(async (req, res) => {
   const result = await execute(`
     DELETE t1 FROM subjects t1
     INNER JOIN subjects t2 
-    WHERE t1.id > t2.id AND t1.code = t2.code AND t1.semester_id = t2.semester_id AND t1.semester_id = ?
+    WHERE t1.id > t2.id AND t1.code = t2.code AND t1.name = t2.name AND t1.semester_id = t2.semester_id AND t1.semester_id = ?
   `, [semester_id]);
 
   await logAction(user, `Eliminó materias duplicadas del semestre #${semester_id}`, 'subject');
