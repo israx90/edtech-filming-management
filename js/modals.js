@@ -1075,6 +1075,24 @@ const Modals = {
         if (statusText) statusText.style.color = isOn ? '#fbbf24' : '';
     },
 
+    // Session displacement toggle (Add Session modal)
+    toggleSessionDisplacement() {
+        const cb = document.getElementById('input-new-session-displacement');
+        if (!cb) return;
+        cb.checked = !cb.checked;
+        this._updateSessionDisplacementUI(cb.checked);
+    },
+
+    _updateSessionDisplacementUI(isOn) {
+        const sw = document.getElementById('session-disp-switch-visual');
+        const knob = document.getElementById('session-disp-knob');
+        const statusText = document.getElementById('session-disp-status-text');
+        if (sw) sw.style.background = isOn ? '#fbbf24' : 'var(--border)';
+        if (knob) knob.style.transform = isOn ? 'translateX(20px)' : 'translateX(0)';
+        if (statusText) statusText.innerHTML = isOn ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;vertical-align:middle"><polyline points="20 6 9 17 4 12"></polyline></svg> queda LIBRE' : 'queda ocupado';
+        if (statusText) statusText.style.color = isOn ? '#fbbf24' : '';
+    },
+
     async saveReservation() {
         const start_date = document.getElementById('input-res-date').value;
         const end_date = document.getElementById('input-res-end-date').value;
@@ -1896,6 +1914,7 @@ const Modals = {
         if (hitoEl) hitoEl.value = '';
         const dispEl = document.getElementById('input-new-session-displacement');
         if (dispEl) dispEl.checked = false;
+        this._updateSessionDisplacementUI(false);
         const notesEl = document.getElementById('input-new-session-notes');
         if (notesEl) notesEl.value = '';
         const errDiv = document.getElementById('add-session-error');

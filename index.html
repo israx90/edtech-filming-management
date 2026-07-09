@@ -965,13 +965,18 @@ PSI-220 Psicología General,Psicología"></textarea>
                 <label for="input-new-session-notes">Notas</label>
                 <textarea id="input-new-session-notes" class="input textarea" rows="3" placeholder="Observaciones de la sesión..."></textarea>
             </div>
-            <div class="form-row" style="margin-top:4px;">
-                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:10px 12px; background:rgba(251,191,36,0.06); border:1px solid rgba(251,191,36,0.2); border-radius:8px;">
-                    <input type="checkbox" id="input-new-session-displacement" style="width:16px;height:16px;accent-color:var(--amber);flex-shrink:0;cursor:pointer;">
-                    <span style="display:flex;align-items:center;gap:8px;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-                        <span style="font-size:13px;font-weight:600;color:var(--amber);">Desplazamiento — Llevar equipo</span>
-                        <span style="font-size:11px;color:var(--text-muted);">Se debe transportar equipo de grabación</span>
+            <!-- Displacement Toggle (unified with reservation modal) -->
+            <div class="form-row" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:4px;">
+                <label style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0;">
+                    <span>
+                        <input type="checkbox" id="input-new-session-displacement" style="display:none;">
+                        <span class="session-disp-switch" id="session-disp-switch-visual" onclick="Modals.toggleSessionDisplacement()" style="display:inline-flex;align-items:center;width:44px;height:24px;border-radius:12px;background:var(--border);position:relative;cursor:pointer;transition:background 0.25s;flex-shrink:0;">
+                            <span style="position:absolute;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform 0.25s;box-shadow:0 1px 4px rgba(0,0,0,0.3);" id="session-disp-knob"></span>
+                        </span>
+                    </span>
+                    <span style="display:flex;flex-direction:column;gap:2px;">
+                        <span style="font-weight:600;color:var(--text-primary);font-size:13px;">Desplazamiento — Llevar equipo</span>
+                        <span style="font-size:11px;color:var(--text-secondary);">Se debe transportar equipo de grabación — el estudio <strong id="session-disp-status-text">queda ocupado</strong></span>
                     </span>
                 </label>
             </div>
