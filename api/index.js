@@ -447,7 +447,7 @@ app.put('/api/assignments/:id', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
   if (!requireAuth(user, res)) return;
   const id = parseInt(req.params.id);
-  const { teacher_name, phone, drive_link, script_status, status, sede, flight_ticket_path, assigned_staff, bitacora } = req.body;
+  const { teacher_name, phone, drive_link, script_status, status, sede, flight_ticket_path, assigned_staff, bitacora, rating, rating_comment } = req.body;
   if (teacher_name !== undefined) await execute('UPDATE filming_assignments SET teacher_name = ? WHERE id = ?', [teacher_name, id]);
   if (phone !== undefined) await execute('UPDATE filming_assignments SET phone = ? WHERE id = ?', [phone, id]);
   if (drive_link !== undefined) await execute('UPDATE filming_assignments SET drive_link = ? WHERE id = ?', [drive_link, id]);
@@ -456,6 +456,8 @@ app.put('/api/assignments/:id', asyncHandler(async (req, res) => {
   if (flight_ticket_path !== undefined) await execute('UPDATE filming_assignments SET flight_ticket_path = ? WHERE id = ?', [flight_ticket_path, id]);
   if (assigned_staff !== undefined) await execute('UPDATE filming_assignments SET assigned_staff = ? WHERE id = ?', [assigned_staff, id]);
   if (bitacora !== undefined) await execute('UPDATE filming_assignments SET bitacora = ? WHERE id = ?', [bitacora, id]);
+  if (rating !== undefined) await execute('UPDATE filming_assignments SET rating = ? WHERE id = ?', [rating || null, id]);
+  if (rating_comment !== undefined) await execute('UPDATE filming_assignments SET rating_comment = ? WHERE id = ?', [rating_comment || null, id]);
   if (status !== undefined) {
     await execute('UPDATE filming_assignments SET status = ? WHERE id = ?', [status, id]);
     if (status === 'completed') {

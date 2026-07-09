@@ -1239,6 +1239,40 @@ const Modals = {
                 <div class="detail-field-value">${data.status === 'completed' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Completada' : data.status === 'cancelled' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Cancelada' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> En progreso'}</div>
             </div>
         </div>`;
+
+        // ── Star Rating Section (visible for completed assignments) ──
+        if (data.status === 'completed') {
+            const currentRating = data.rating || 0;
+            const ratingComment = data.rating_comment || '';
+
+            const renderStars = (rating, interactive) => {
+                let starsHtml = '';
+                for (let i = 1; i <= 5; i++) {
+                    const filled = i <= rating;
+                    const starStyle = interactive
+                        ? `cursor:pointer; transition: transform 0.15s, color 0.15s;`
+                        : '';
+                    const hoverAttr = interactive
+                        ? `onmouseenter="this.style.transform='scale(1.25)'" onmouseleave="this.style.transform='scale(1)'" onclick="Modals.setRating(${i})"`
+                        : '';
+                    starsHtml += `<span style="font-size:22px; color:${filled ? '#f59e0b' : 'rgba(255,255,255,0.15)'}; ${starStyle}" ${hoverAttr}>${filled ? '★' : '☆'}</span>`;
+                }
+                return starsHtml;
+            };
+
+            html += `<div class="detail-field" style="margin-top:4px;">
+                <div class="detail-field-label">Calificación del Docente</div>
+                <div class="detail-field-value">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div id="rating-stars">${renderStars(currentRating, canEdit)}</div>
+                        <span id="rating-label" style="font-size:12px; color:var(--text-muted); font-weight:600;">${currentRating ? `${currentRating}/5` : 'Sin calificar'}</span>
+                    </div>
+                    ${canEdit ? `<div style="margin-top:8px;">
+                        <textarea id="rating-comment-input" class="input" rows="2" placeholder="Comentario sobre el desempeño del docente..." style="width:100%;max-width:100%;resize:vertical;font-size:12px;line-height:1.4;" onblur="Modals.saveRatingComment(this.value)">${ratingComment}</textarea>
+                    </div>` : (ratingComment ? `<div style="margin-top:6px;font-size:12px;color:var(--text-secondary);font-style:italic;">"${ratingComment}"</div>` : '')}
+                </div>
+            </div>`; 
+        }
         // Whatsapp Templates Dropdown (admin/post only)
         const cleanPhone = data.phone ? data.phone.replace(/[^0-9]/g, '') : '';
         const safeTeacherName = (data.teacher_name || '').replace(/'/g, "\\'");
@@ -1485,6 +1519,38 @@ const Modals = {
             const status = document.getElementById('bitacora-save-status');
             if (status) { status.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Error de conexión'; status.style.color = 'var(--red)'; }
             showToast('Error al guardar bitácora — revisa tu conexión', 'error');
+        }
+    },
+
+    // ===== Star Rating for Teachers =====
+    async setRating(stars) {
+        if (!this.currentAssignmentId) return;
+        try {
+            await API.put(`/assignments/${this.currentAssignmentId}`, { rating: stars });
+            // Update stars UI instantly
+            const container = document.getElementById('rating-stars');
+            if (container) {
+                let html = '';
+                for (let i = 1; i <= 5; i++) {
+                    const filled = i <= stars;
+                    html += `<span style="font-size:22px; color:${filled ? '#f59e0b' : 'rgba(255,255,255,0.15)'}; cursor:pointer; transition: transform 0.15s, color 0.15s;" onmouseenter="this.style.transform='scale(1.25)'" onmouseleave="this.style.transform='scale(1)'" onclick="Modals.setRating(${i})">${filled ? '★' : '☆'}</span>`;
+                }
+                container.innerHTML = html;
+            }
+            const label = document.getElementById('rating-label');
+            if (label) { label.textContent = `${stars}/5`; label.style.color = '#f59e0b'; }
+            showToast(`Calificación: ${stars}/5 ★`, 'success');
+        } catch (e) {
+            showToast('Error al guardar calificación', 'error');
+        }
+    },
+
+    async saveRatingComment(value) {
+        if (!this.currentAssignmentId) return;
+        try {
+            await API.put(`/assignments/${this.currentAssignmentId}`, { rating_comment: value });
+        } catch (e) {
+            showToast('Error al guardar comentario', 'error');
         }
     },
 
