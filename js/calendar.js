@@ -198,9 +198,9 @@ const Calendar = {
             const isAcademy = session.career && session.career.toLowerCase().includes('academy');
             ev.className = `cal-event status-${session.assignment_status || 'in_progress'}${isCancelled ? ' session-cancelled' : ''}${isAcademy ? ' academy' : ''}`;
             const typeColors = {
-                'Teórica':   { bg: 'rgba(96,165,250,0.2)', color: '#60a5fa' },
+                'Teórica':   { bg: 'rgba(226,232,240,0.15)', color: '#cbd5e1' },
                 'Numérica':  { bg: 'rgba(52,211,153,0.2)', color: '#34d399' },
-                'Proyecto Integrador': { bg: 'rgba(167,139,250,0.2)', color: '#a78bfa' }
+                'Proyecto Integrador': { bg: 'rgba(251,191,36,0.15)', color: '#fbbf24' }
             };
             const tc = typeColors[session.subject_type] || typeColors['Teórica'];
             const typeTag = session.subject_type
@@ -242,7 +242,7 @@ const Calendar = {
             `;
             ev.title = `${isCancelled ? 'CANCELADO — ' : ''}${session.teacher_name}${isExternal ? ` (${session.sede})` : ''} — ${session.subject_name}\n${session.start_time} - ${session.end_time}`;
 
-            if (App.user) {
+            if (App.user && session.assignment_id) {
                 ev.style.cursor = 'pointer';
                 ev.addEventListener('click', (e) => {
                     e.stopPropagation();

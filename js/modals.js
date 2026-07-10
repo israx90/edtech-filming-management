@@ -1215,6 +1215,7 @@ const Modals = {
     // ===== ASSIGNMENT DETAIL =====
 
     async showAssignmentDetail(assignmentId) {
+        if (!assignmentId) return showToast('No se encontró la asignación', 'error');
         this.currentAssignmentId = assignmentId;
         const data = await API.get(`/assignments/${assignmentId}`);
         if (data.error) return showToast(data.error, 'error');
