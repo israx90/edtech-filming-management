@@ -1736,8 +1736,10 @@ const Modals = {
 
         showToast('Sesión actualizada', 'success');
         this.closeAll();
-        Calendar.render();
-        this.showAssignmentDetail(this.currentAssignmentId);
+        await Calendar.render();
+        if (this.currentAssignmentId) {
+            this.showAssignmentDetail(this.currentAssignmentId);
+        }
     },
 
     sendWhatsappTemplate(phone, teacherName, subject, sede) {

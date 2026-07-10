@@ -29,8 +29,13 @@ const asyncHandler = fn => (req, res, next) => {
 // --- DB MIGRATIONS (run once at startup) ---
 (async () => {
   try {
-    await execute("ALTER TABLE recording_sessions ADD COLUMN IF NOT EXISTS is_displacement TINYINT(1) DEFAULT 0");
-  } catch (e) { /* Column already exists */ }
+    // Check if column exists first, add it if not
+    const [cols] = await require('../src/db').getPool().execute("SHOW COLUMNS FROM recording_sessions LIKE 'is_displacement'");
+    if (cols.length === 0) {
+      await execute("ALTER TABLE recording_sessions ADD COLUMN is_displacement TINYINT(1) DEFAULT 0");
+      console.log('[Migration] Added is_displacement column to recording_sessions');
+    }
+  } catch (e) { console.error('[Migration] is_displacement:', e.message); }
 
   // Create holidays table
   try {
@@ -556,7 +561,7 @@ app.put('/api/sessions/:id', asyncHandler(async (req, res) => {
   if ('staff_3_id' in body) await execute('UPDATE recording_sessions SET staff_3_id = ? WHERE id = ?', [body.staff_3_id, id]);
   if ('staff_4_id' in body) await execute('UPDATE recording_sessions SET staff_4_id = ? WHERE id = ?', [body.staff_4_id, id]);
   if ('is_displacement' in body) {
-    try { await execute('UPDATE recording_sessions SET is_displacement = ? WHERE id = ?', [body.is_displacement ? 1 : 0, id]); } catch(e) { /* column not yet migrated */ }
+    await execute('UPDATE recording_sessions SET is_displacement = ? WHERE id = ?', [body.is_displacement ? 1 : 0, id]);
   }
   if (body.status !== undefined) {
     await execute('UPDATE recording_sessions SET status = ? WHERE id = ?', [body.status, id]);
