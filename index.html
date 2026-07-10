@@ -1095,6 +1095,22 @@ PSI-220 Psicología General,Psicología"></textarea>
                     </div>
                 </div>
             </div>
+
+            <!-- Displacement Toggle (unified style) -->
+            <div class="form-row" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:8px;">
+                <label style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0;">
+                    <span>
+                        <input type="checkbox" id="input-edit-session-displacement" style="display:none;">
+                        <span id="edit-session-disp-switch" onclick="Modals.toggleEditSessionDisplacement()" style="display:inline-flex;align-items:center;width:44px;height:24px;border-radius:12px;background:var(--border);position:relative;cursor:pointer;transition:background 0.25s;flex-shrink:0;">
+                            <span style="position:absolute;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform 0.25s;box-shadow:0 1px 4px rgba(0,0,0,0.3);" id="edit-session-disp-knob"></span>
+                        </span>
+                    </span>
+                    <span style="display:flex;flex-direction:column;gap:2px;">
+                        <span style="font-weight:600;color:var(--text-primary);font-size:13px;">Desplazamiento — Llevar equipo</span>
+                        <span style="font-size:11px;color:var(--text-secondary);">Se debe transportar equipo de grabación — el estudio <strong id="edit-session-disp-status">queda ocupado</strong></span>
+                    </span>
+                </label>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" data-close-modal>Cancelar</button>

@@ -1402,7 +1402,7 @@ const Modals = {
                         <span class="detail-session-date" style="${isSessCancelled ? 'text-decoration:line-through;opacity:0.7;' : ''}">${dateF}</span>
                         <div class="detail-session-actions">
                             ${App.user && ['admin','post_productor'].includes(App.user.role) ? `
-                            ${!isSessCancelled ? `<button class="btn-icon" onclick="Modals.openEditSession(${s.id}, '${s.session_date}', '${s.start_time?.substring(0,5)}', '${s.end_time?.substring(0,5)}', '${s.hito_reached||''}', \`${(s.notes||'').replace(/\`/g,"'").replace(/"/g,'&quot;')}\`, '${s.staff_1_id||''}', '${s.staff_2_id||''}', '${s.staff_3_id||''}', '${s.staff_4_id||''}')" title="Editar sesión" style="color:var(--accent);">
+                            ${!isSessCancelled ? `<button class="btn-icon" onclick="Modals.openEditSession(${s.id}, '${s.session_date}', '${s.start_time?.substring(0,5)}', '${s.end_time?.substring(0,5)}', '${s.hito_reached||''}', \`${(s.notes||'').replace(/\`/g,"'").replace(/"/g,'&quot;')}\`, '${s.staff_1_id||''}', '${s.staff_2_id||''}', '${s.staff_3_id||''}', '${s.staff_4_id||''}', ${s.is_displacement ? 1 : 0})" title="Editar sesión" style="color:var(--accent);">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                             </button>` : ''}
                             ${!isSessCancelled ? `<button class="btn-icon" onclick="Modals.cancelSession(${s.id})" title="Marcar como cancelada por inasistencia" style="color:#ef4444;">
@@ -1640,7 +1640,7 @@ const Modals = {
 
     _editingSessionId: null,
 
-    async openEditSession(id, date, start, end, hito, notes, staff1Id, staff2Id, staff3Id, staff4Id) {
+    async openEditSession(id, date, start, end, hito, notes, staff1Id, staff2Id, staff3Id, staff4Id, isDisplacement) {
         this._editingSessionId = id;
         
         ['input-edit-session-start', 'input-edit-session-end'].forEach(id => this.convertToTimeSelect(id));
@@ -1686,10 +1686,33 @@ const Modals = {
             afternoonBlock.style.display = 'none';
         }
 
+        // Load displacement state
+        const editDispCb = document.getElementById('input-edit-session-displacement');
+        const isDisp = isDisplacement == 1 || isDisplacement === true;
+        if (editDispCb) editDispCb.checked = isDisp;
+        this._updateEditSessionDisplacementUI(isDisp);
+
         // Close detail and open edit session modal
         document.querySelectorAll('.modal.active').forEach(m => m.classList.remove('active'));
         this.open('modal-edit-session');
         this.initDatePickers('modal-edit-session');
+    },
+
+    toggleEditSessionDisplacement() {
+        const cb = document.getElementById('input-edit-session-displacement');
+        if (!cb) return;
+        cb.checked = !cb.checked;
+        this._updateEditSessionDisplacementUI(cb.checked);
+    },
+
+    _updateEditSessionDisplacementUI(isOn) {
+        const sw = document.getElementById('edit-session-disp-switch');
+        const knob = document.getElementById('edit-session-disp-knob');
+        const statusText = document.getElementById('edit-session-disp-status');
+        if (sw) sw.style.background = isOn ? '#fbbf24' : 'var(--border)';
+        if (knob) knob.style.transform = isOn ? 'translateX(20px)' : 'translateX(0)';
+        if (statusText) statusText.innerHTML = isOn ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;vertical-align:middle"><polyline points="20 6 9 17 4 12"></polyline></svg> queda LIBRE' : 'queda ocupado';
+        if (statusText) statusText.style.color = isOn ? '#fbbf24' : '';
     },
 
     async saveEditSession() {
@@ -1703,10 +1726,11 @@ const Modals = {
         const staff_2_id = document.getElementById('input-edit-session-staff-2').value || null;
         const staff_3_id = document.getElementById('input-edit-session-staff-3').value || null;
         const staff_4_id = document.getElementById('input-edit-session-staff-4').value || null;
+        const is_displacement = document.getElementById('input-edit-session-displacement')?.checked ? 1 : 0;
 
         if (!session_date || !start_time || !end_time) return showToast('Completa fecha y horario', 'error');
 
-        const result = await API.put(`/sessions/${this._editingSessionId}`, { session_date, start_time, end_time, notes, staff_1_id, staff_2_id, staff_3_id, staff_4_id });
+        const result = await API.put(`/sessions/${this._editingSessionId}`, { session_date, start_time, end_time, notes, staff_1_id, staff_2_id, staff_3_id, staff_4_id, is_displacement });
         if (result.error) return showToast(result.error, 'error');
 
         showToast('Sesión actualizada', 'success');
