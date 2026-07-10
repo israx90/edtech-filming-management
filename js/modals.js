@@ -863,7 +863,7 @@ const Modals = {
             });
         }
 
-        // Set default date to today
+        // Set default date to today (hidden input used by save)
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('input-session-date').value = today;
 
@@ -872,19 +872,31 @@ const Modals = {
         if (s2block) s2block.style.display = 'none';
         const s2date = document.getElementById('input-session2-date');
         if (s2date) s2date.value = '';
-        
+
+        // input-session-date is now hidden (avail calendar), only convert s2 + times
         ['input-session-start', 'input-session-end', 'input-session2-start', 'input-session2-end'].forEach(id => this.convertToTimeSelect(id));
         document.getElementById('input-session-start').value = '08:00';
         document.getElementById('input-session-end').value = '10:00';
         document.getElementById('input-session2-start').value = '08:00';
         document.getElementById('input-session2-end').value = '10:00';
-        
+
         const s2hito = document.getElementById('input-session2-hito');
         if (s2hito) s2hito.value = '';
 
         document.getElementById('modal-assignment-title').textContent = this.pendingTeacherId ? 'Agendar Filmación desde Agenda' : 'Nueva Filmación';
         this.open('modal-assignment');
-        this.initDatePickers('modal-assignment');
+        // Only init date pickers for session-2-date and other fields (session-1 uses avail calendar)
+        const s2dateInput = document.getElementById('input-session2-date');
+        if (s2dateInput) this.convertToDatePicker('input-session2-date');
+
+        // Initialize availability calendar for session-1 date
+        const now = new Date();
+        this._assignYear = now.getFullYear();
+        this._assignMonth = now.getMonth() + 1;
+        // Reset selected display
+        const selDisplay = document.getElementById('assign-cal-selected');
+        if (selDisplay) { selDisplay.style.display = 'none'; selDisplay.innerHTML = ''; }
+        await this._renderAssignCalendar();
     },
 
     toggleSecondSession() {
@@ -1969,6 +1981,146 @@ const Modals = {
         this._availMonth++;
         if (this._availMonth > 12) { this._availMonth = 1; this._availYear++; }
         this._renderAvailCalendar();
+    },
+
+    assignCalPrev() {
+        this._assignMonth--;
+        if (this._assignMonth < 1) { this._assignMonth = 12; this._assignYear--; }
+        this._renderAssignCalendar();
+    },
+
+    assignCalNext() {
+        this._assignMonth++;
+        if (this._assignMonth > 12) { this._assignMonth = 1; this._assignYear++; }
+        this._renderAssignCalendar();
+    },
+
+    async _renderAssignCalendar() {
+        const y = this._assignYear;
+        const m = this._assignMonth;
+        const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+        const titleEl = document.getElementById('assign-cal-title');
+        if (titleEl) titleEl.textContent = `${monthNames[m - 1]} ${y}`;
+
+        // Fetch availability (reuse _availData if same month, else fetch fresh)
+        const data = await API.get(`/sessions/availability?year=${y}&month=${m}`);
+        this._assignData = data || {};
+
+        const grid = document.getElementById('assign-cal-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        // Day headers
+        ['L','M','X','J','V','S','D'].forEach(d => {
+            const el = document.createElement('div');
+            el.style.cssText = 'font-size:10px;font-weight:700;color:var(--text-muted);padding:4px 0;';
+            el.textContent = d;
+            grid.appendChild(el);
+        });
+
+        const firstDay = new Date(y, m - 1, 1).getDay();
+        const offset = firstDay === 0 ? 6 : firstDay - 1;
+        for (let i = 0; i < offset; i++) grid.appendChild(document.createElement('div'));
+
+        const daysInMonth = new Date(y, m, 0).getDate();
+        const today = new Date().toISOString().split('T')[0];
+        const selectedDate = document.getElementById('input-session-date').value;
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            const status = this._assignData[dateStr] || 'free';
+            const isPast = dateStr < today;
+            const isSelected = dateStr === selectedDate;
+            const dayOfWeek = new Date(dateStr + 'T12:00:00').getDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            const monthDay = dateStr.substring(5);
+            const holidayName = (typeof Calendar !== 'undefined' && Calendar.HOLIDAYS)
+                ? (Calendar.HOLIDAYS[dateStr] || Calendar.HOLIDAYS[monthDay] || null)
+                : null;
+            const isBlocked = isPast || isWeekend || !!holidayName || status === 'full';
+
+            const cell = document.createElement('div');
+            cell.style.cssText = `
+                border-radius: 6px;
+                padding: 5px 2px;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: ${isBlocked ? 'default' : 'pointer'};
+                opacity: ${(isPast || isWeekend) ? '0.3' : (isBlocked ? '0.55' : '1')};
+                position: relative;
+                pointer-events: ${isBlocked ? 'none' : 'auto'};
+                transition: transform 0.15s, box-shadow 0.15s;
+                border: 2px solid ${isSelected ? 'var(--accent)' : 'transparent'};
+                box-shadow: ${isSelected ? '0 0 0 2px rgba(139,92,246,0.4)' : 'none'};
+                text-align: center;
+            `;
+
+            if (isWeekend) {
+                cell.style.background = 'rgba(255,255,255,0.04)';
+                cell.style.color = 'var(--text-muted)';
+            } else if (holidayName) {
+                cell.style.background = 'rgba(245,158,11,0.18)';
+                cell.style.color = 'var(--amber)';
+                cell.title = `🎉 Feriado: ${holidayName}`;
+            } else if (status === 'full') {
+                cell.style.background = 'rgba(239,68,68,0.22)';
+                cell.style.color = '#ef4444';
+                cell.title = 'Día completo — sin disponibilidad';
+            } else if (status === 'morning_busy') {
+                cell.style.background = 'linear-gradient(to right, rgba(239,68,68,0.3) 50%, rgba(34,197,94,0.25) 50%)';
+                cell.style.color = 'var(--text-primary)';
+                cell.title = 'Mañana ocupada — Tarde libre (desde 13:00)';
+            } else if (status === 'afternoon_busy') {
+                cell.style.background = 'linear-gradient(to right, rgba(34,197,94,0.25) 50%, rgba(245,158,11,0.3) 50%)';
+                cell.style.color = 'var(--text-primary)';
+                cell.title = 'Mañana libre — Tarde ocupada';
+            } else if (!isPast) {
+                cell.style.background = 'rgba(34,197,94,0.15)';
+                cell.style.color = '#22c55e';
+                cell.title = 'Día completamente libre';
+            } else {
+                cell.style.background = 'transparent';
+                cell.style.color = 'var(--text-muted)';
+            }
+
+            cell.textContent = day;
+
+            if (!isBlocked) {
+                cell.addEventListener('mouseenter', () => {
+                    if (dateStr !== selectedDate) { cell.style.transform = 'scale(1.12)'; cell.style.zIndex = '2'; }
+                });
+                cell.addEventListener('mouseleave', () => {
+                    cell.style.transform = 'scale(1)'; cell.style.zIndex = '';
+                });
+                cell.addEventListener('click', () => {
+                    document.getElementById('input-session-date').value = dateStr;
+
+                    // Update selected display
+                    const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+                    const dObj = new Date(dateStr + 'T12:00:00');
+                    let avail = '';
+                    let availColor = 'var(--green)';
+                    if (status === 'morning_busy') { avail = '☀️ Mañana ocupada · 🌙 Tarde libre (13:00–20:00)'; availColor = '#22c55e'; }
+                    else if (status === 'afternoon_busy') { avail = '☀️ Mañana libre (08:00–13:00) · 🌙 Tarde ocupada'; availColor = '#f59e0b'; }
+                    else { avail = '✅ Día completamente libre'; availColor = '#22c55e'; }
+
+                    const display = document.getElementById('assign-cal-selected');
+                    if (display) {
+                        display.innerHTML = `<strong>${dias[dObj.getDay()].charAt(0).toUpperCase() + dias[dObj.getDay()].slice(1)} ${day} de ${monthNames[m-1]} de ${y}</strong> &mdash; <span style="color:${availColor}">${avail}</span>`;
+                        display.style.display = 'block';
+                    }
+
+                    // Adjust time dropdowns based on availability
+                    this._availData = this._assignData; // temporarily share data so limitTimeOptions works
+                    this.limitTimeOptions(dateStr);
+
+                    // Re-render to highlight selection
+                    this._renderAssignCalendar();
+                });
+            }
+            grid.appendChild(cell);
+        }
     },
 
     async _renderAvailCalendar() {

@@ -757,9 +757,26 @@ PSI-220 Psicología General,Psicología"></textarea>
             <div class="divider"></div>
             <h4 class="form-section-title">Primera Sesión de Grabación</h4>
             <div class="form-grid form-grid-3">
-                <div class="form-row">
-                    <label for="input-session-date">Fecha</label>
-                    <input type="date" id="input-session-date" class="input">
+                <div class="form-row" style="grid-column: 1 / -1;">
+                    <label>Fecha</label>
+                    <!-- Hidden value holder — still read by saveAssignment() -->
+                    <input type="hidden" id="input-session-date">
+                    <!-- Availability calendar widget -->
+                    <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;padding:12px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                            <button type="button" onclick="Modals.assignCalPrev()" style="background:none;border:none;color:var(--text-secondary);font-size:18px;cursor:pointer;padding:2px 8px;border-radius:4px;">&#8249;</button>
+                            <span id="assign-cal-title" style="font-size:13px;font-weight:700;color:var(--text-primary);">—</span>
+                            <button type="button" onclick="Modals.assignCalNext()" style="background:none;border:none;color:var(--text-secondary);font-size:18px;cursor:pointer;padding:2px 8px;border-radius:4px;">&#8250;</button>
+                        </div>
+                        <div id="assign-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;"></div>
+                        <div id="assign-cal-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:10px;color:var(--text-muted);">
+                            <span style="display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(34,197,94,0.25);"></span>Libre</span>
+                            <span style="display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:linear-gradient(to right,rgba(239,68,68,0.3) 50%,rgba(34,197,94,0.25) 50%);"></span>M. ocupada</span>
+                            <span style="display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:linear-gradient(to right,rgba(34,197,94,0.25) 50%,rgba(245,158,11,0.3) 50%);"></span>T. ocupada</span>
+                            <span style="display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(239,68,68,0.22);"></span>Completo</span>
+                        </div>
+                        <div id="assign-cal-selected" style="display:none;margin-top:8px;font-size:11px;font-weight:600;padding:6px 8px;background:var(--bg-card);border-radius:6px;"></div>
+                    </div>
                 </div>
                 <div class="form-row">
                     <label for="input-session-start">Hora Inicio</label>
