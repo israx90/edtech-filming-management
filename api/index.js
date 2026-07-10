@@ -503,14 +503,15 @@ app.get('/api/sessions/availability', asyncHandler(async (req, res) => {
   if (!requireAuth(user, res)) return;
   const year = parseInt(req.query.year || new Date().getFullYear());
   const month = parseInt(req.query.month || (new Date().getMonth() + 1));
-  const sessions = await queryAll("SELECT session_date, start_time, end_time FROM recording_sessions WHERE EXTRACT(YEAR FROM session_date) = ? AND EXTRACT(MONTH FROM session_date) = ? AND (status IS NULL OR status != 'cancelled')", [year, month]);
-  const reservations = await queryAll("SELECT date, start_time, end_time FROM reservations WHERE EXTRACT(YEAR FROM date) = ? AND EXTRACT(MONTH FROM date) = ?", [year, month]);
+  const sessions = await queryAll("SELECT session_date, start_time, end_time, is_displacement FROM recording_sessions WHERE EXTRACT(YEAR FROM session_date) = ? AND EXTRACT(MONTH FROM session_date) = ? AND (status IS NULL OR status != 'cancelled')", [year, month]);
+  const reservations = await queryAll("SELECT date, start_time, end_time FROM reservations WHERE is_displacement = 0 AND EXTRACT(YEAR FROM date) = ? AND EXTRACT(MONTH FROM date) = ?", [year, month]);
   const result = {};
   const pad = n => String(n).padStart(2, '0');
   for (let day = 1; day <= new Date(year, month, 0).getDate(); day++) {
     const dateStr = `${year}-${pad(month)}-${pad(day)}`;
     let morningBusy = false, afternoonBusy = false;
-    [...sessions, ...reservations.map(r => ({ session_date: r.date, start_time: r.start_time, end_time: r.end_time }))].forEach(s => {
+    const nonDispSessions = sessions.filter(s => !s.is_displacement || s.is_displacement == 0);
+    [...nonDispSessions, ...reservations.map(r => ({ session_date: r.date, start_time: r.start_time, end_time: r.end_time }))].forEach(s => {
       if (s.session_date !== dateStr) return;
       if (s.start_time?.substring(0,5) < '13:00') morningBusy = true;
       if (s.end_time?.substring(0,5) > '13:00') afternoonBusy = true;
