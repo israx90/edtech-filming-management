@@ -623,29 +623,35 @@ app.put('/api/reservations/:id', asyncHandler(async (req, res) => {
 
   // Find all sibling rows (same user, same time, same reason = same reservation)
   const siblings = await queryAll(
-    'SELECT id FROM reservations WHERE user_id = ? AND start_time = ? AND end_time = ? AND reason = ?',
+    'SELECT id, date FROM reservations WHERE user_id = ? AND start_time = ? AND end_time = ? AND reason = ?',
     [original.user_id, original.start_time, original.end_time, original.reason]
   );
   const siblingIds = siblings.map(s => s.id);
 
-  // If date range changed, delete old rows and recreate
-  if (start_date !== undefined && end_date !== undefined) {
-    // Delete all old sibling rows
+  // Check if date range actually changed
+  const oldDates = siblings.map(s => typeof s.date === 'string' ? s.date.substring(0, 10) : s.date.toISOString().substring(0, 10)).sort();
+  const datesChanged = start_date && end_date && (oldDates[0] !== start_date || oldDates[oldDates.length - 1] !== end_date);
+
+  if (datesChanged) {
+    // Delete all old sibling rows and recreate for new date range
     if (siblingIds.length > 0) {
       await execute(`DELETE FROM reservations WHERE id IN (${siblingIds.map(() => '?').join(',')})`, siblingIds);
     }
-    // Recreate for new date range
-    const current = new Date(start_date);
-    const last = new Date(end_date);
-    while (current <= last) {
-      const dStr = current.toISOString().split('T')[0];
+    // Generate dates without timezone issues using string math
+    const [sy, sm, sd] = start_date.split('-').map(Number);
+    const [ey, em, ed] = end_date.split('-').map(Number);
+    const startD = new Date(sy, sm - 1, sd);
+    const endD = new Date(ey, em - 1, ed);
+    for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
+      const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       await execute('INSERT INTO reservations (user_id, date, start_time, end_time, reason, is_displacement, attendees) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [original.user_id, dStr, start_time || original.start_time, end_time || original.end_time, reason !== undefined ? reason : original.reason, is_displacement !== undefined ? !!is_displacement : !!original.is_displacement, attendees !== undefined ? attendees : original.attendees]);
-      current.setDate(current.getDate() + 1);
+        [original.user_id, dStr, start_time || original.start_time, end_time || original.end_time,
+         reason !== undefined ? reason : original.reason,
+         is_displacement !== undefined ? (is_displacement ? 1 : 0) : (original.is_displacement ? 1 : 0),
+         attendees !== undefined ? attendees : original.attendees]);
     }
   } else {
-    // No date range change — update all sibling rows in place
-    const updates = [];
+    // Update all sibling rows in place (common case: toggling displacement, editing time, etc.)
     const updateAll = async (field, value) => {
       if (siblingIds.length > 0) {
         await execute(`UPDATE reservations SET ${field} = ? WHERE id IN (${siblingIds.map(() => '?').join(',')})`, [value, ...siblingIds]);
@@ -654,7 +660,7 @@ app.put('/api/reservations/:id', asyncHandler(async (req, res) => {
     if (start_time !== undefined) await updateAll('start_time', start_time);
     if (end_time !== undefined) await updateAll('end_time', end_time);
     if (reason !== undefined) await updateAll('reason', reason);
-    if (is_displacement !== undefined) await updateAll('is_displacement', !!is_displacement);
+    if (is_displacement !== undefined) await updateAll('is_displacement', is_displacement ? 1 : 0);
     if (attendees !== undefined) await updateAll('attendees', attendees);
   }
   res.json({ success: true });
