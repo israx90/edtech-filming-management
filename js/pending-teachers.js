@@ -278,7 +278,7 @@ const PendingTeachers = {
                 const phoneDisplay = t.phone
                     ? (() => {
                         const cleanPhone = t.phone.replace(/[^0-9]/g, '');
-                        const greeting = encodeURIComponent('Hola ' + t.name + ', le escribimos del Estudio de Filmaci\u00f3n EDTECH respecto a la materia ' + (t.subject_code || '') + ' ' + t.subject + '. \u00bfPodr\u00edamos coordinar su grabaci\u00f3n?');
+                        const greeting = encodeURIComponent('Hola ' + t.name + ', le escribo del Estudio EDTECH. ¿Podríamos coordinar la grabación de ' + (t.subject_code ? t.subject_code + ' ' : '') + t.subject + '?');
                         return `<a href="https://wa.me/${cleanPhone}?text=${greeting}" target="_blank" class="pt-phone-link" title="Abrir en WhatsApp">${t.phone}</a>`;
                     })()
                     : '<span class="pt-no-phone">Sin número</span>';

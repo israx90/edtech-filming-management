@@ -1834,69 +1834,56 @@ const Modals = {
             `Hola ${firstName}, ${greeting}!`
         ]);
 
-        const firma = `\n\n${myName}\n_Estudio de Filmación EDTECH_`;
+        const firma = `\n\n${myName} (Estudio EDTECH)`;
 
         if (templateId === 'coordinacion') {
             message = pick([
-                `${saludo}\n\nLe escribo desde el *Estudio de Filmación EDTECH*.\n\nQueremos coordinar las fechas de grabación de la materia *${subject}*. ¿Qué días le vendrían bien?`,
-                `${saludo}\n\nSoy ${myName} del *Estudio EDTECH*.\n\nNecesitamos agendar la filmación de *${subject}*. ¿Podría indicarnos su disponibilidad?`,
-                `${saludo}\n\nLe contacto del *Estudio EDTECH* para coordinar la grabación de *${subject}*.\n\n¿Cuándo tendría disponibilidad? Nos adaptamos a su agenda.`
+                `${saludo}\n\nLe escribo para coordinar la grabación de *${subject}*. ¿Qué fechas tiene disponibles?`,
+                `${saludo}\n\nNecesitamos agendar la filmación de *${subject}*. ¿Cuándo tendría disponibilidad?`
             ]);
             message += firma;
         } else if (templateId === 'confirmacion') {
             const fechaBlock = sessionText ? `\n\n*Fecha:* ${sessionText}` : '';
             message = pick([
-                `${saludo}\n\nLe confirmo su grabación de *${subject}* en ${estudioText}.${fechaBlock}\n\n¡${lox.charAt(0).toUpperCase() + lox.slice(1)} esperamos!`,
-                `${saludo}\n\nQueda confirmada su filmación de *${subject}*.${fechaBlock}\n\nCualquier duda, escríbanos con confianza.`,
-                `${saludo}\n\nSu sesión de *${subject}* está confirmada.${fechaBlock}\n\n¡Será un gusto recibirle!`
+                `${saludo}\n\nConfirmo su grabación de *${subject}* en ${estudioText}.${fechaBlock}\n\n¡Le esperamos!`,
+                `${saludo}\n\nSu sesión de *${subject}* está confirmada.${fechaBlock}\n\n¡Nos vemos!`
             ]);
             message += firma;
         } else if (templateId === 'recordatorio') {
             const fechaBlock = sessionText ? `\n\n${sessionText}` : '';
             message = pick([
-                `${saludo}\n\nRecordatorio: tiene grabación de *${subject}* en ${estudioText}.${fechaBlock}\n\n¡${lox.charAt(0).toUpperCase() + lox.slice(1)} esperamos!`,
-                `${saludo}\n\nLe recordamos su sesión de filmación de *${subject}*.${fechaBlock}\n\n¡Todo listo para recibirle!`,
-                `${saludo}\n\nSolo un recordatorio de su grabación de *${subject}*.${fechaBlock}\n\n¡Nos vemos pronto!`
+                `${saludo}\n\nLe recuerdo su grabación de *${subject}* en ${estudioText}.${fechaBlock}\n\n¡Le esperamos!`,
+                `${saludo}\n\nRecordatorio de su sesión de *${subject}*.${fechaBlock}\n\n¡Nos vemos pronto!`
             ]);
             message += firma;
         } else if (templateId === 'reagendamiento') {
-            const fechaBlock = sessionText ? `\n\n*Nueva fecha:* ${sessionText}` : '\n\n_Le confirmaremos la nueva fecha a la brevedad._';
+            const fechaBlock = sessionText ? `\n\n*Nueva fecha:* ${sessionText}` : '\n\n_Le confirmaremos la nueva fecha pronto._';
             message = pick([
-                `${saludo}\n\nLe informo que su sesión de *${subject}* fue *re-agendada*.${fechaBlock}\n\nDisculpe las molestias y gracias por su comprensión.`,
-                `${saludo}\n\nHubo un cambio en la agenda de *${subject}*.${fechaBlock}\n\nLamentamos el inconveniente. ¡Quedamos atentos!`,
-                `${saludo}\n\nSu grabación de *${subject}* cambió de fecha.${fechaBlock}\n\nGracias por su flexibilidad.`
+                `${saludo}\n\nSu sesión de *${subject}* fue re-agendada.${fechaBlock}\n\nSaludos.`,
+                `${saludo}\n\nHubo un cambio en su grabación de *${subject}*.${fechaBlock}\n\nQuedamos atentos.`
             ]);
             message += firma;
         } else if (templateId === 'esperando') {
             message = pick([
-                `${saludo}\n\nSoy ${myName}, ya estamos listos en ${estudioText} para su grabación de *${subject}*.\n\n¡${lox.charAt(0).toUpperCase() + lox.slice(1)} esperamos!`,
-                `${saludo}\n\nTodo listo en ${estudioText} para filmar *${subject}*. ¡${lox.charAt(0).toUpperCase() + lox.slice(1)} esperamos cuando pueda llegar!`,
-                `${saludo}\n\nEl equipo ya está preparado en ${estudioText} para *${subject}*. ¡Venga con confianza!`
+                `${saludo}\n\nYa estamos listos en ${estudioText} para su grabación de *${subject}*. ¡Le esperamos!`,
+                `${saludo}\n\nEl equipo ya está preparado en ${estudioText} para filmar *${subject}*. ¡Venga con confianza!`
             ]);
-            message += `\n\n${myName}\n_Estudio EDTECH_`;
+            message += firma;
         } else if (templateId === 'protocolo') {
             message = pick([
-                `${saludo}\n\nLe comparto el *Protocolo de Vestuario* para la filmación de *${subject}*.\n\nRecuerde traer *5 mudas de ropa* (una por hito). En el PDF encontrará qué colores usar y qué evitar.\n\nRevise la guía completa aquí:`,
-                `${saludo}\n\nPara su grabación de *${subject}*, necesitará *5 cambios de ropa* (uno por cada hito).\n\nEn el documento adjunto verá las recomendaciones de vestuario y colores ideales para cámara.\n\nGuía completa:`,
-                `${saludo}\n\nAntes de su filmación de *${subject}*, le recuerdo traer *5 mudas de vestuario* distintas.\n\nEsto nos ayuda a dar variedad visual. Más detalles en el PDF:`
+                `${saludo}\n\nLe comparto el protocolo de vestuario para *${subject}* (traer 5 mudas distintas, vea recomendaciones en el PDF):`
             ]);
             message += firma;
         }
 
         // === BLOQUES ADICIONALES ===
 
-        if (['confirmacion', 'recordatorio', 'reagendamiento', 'esperando'].includes(templateId)) {
-            message += `\n\n*UBICACIÓN DEL ESTUDIO*`;
-            message += `\nEdificio Iturri, piso 18`;
-            message += `\nAv. 6 de Agosto esq. Campos`;
-            message += `\nSopocachi, La Paz`;
-            message += `\n\nhttps://maps.google.com/?q=Edificio+Iturri+La+Paz`;
-            message += `\n\n_Entrada por calle Campos. Pida al portero que active el ascensor._`;
+        if (['confirmacion', 'recordatorio', 'esperando'].includes(templateId)) {
+            message += `\n\n📍 *Ubicación:* Edif. Iturri, piso 18 (Sopocachi, La Paz)\nhttps://maps.google.com/?q=Edificio+Iturri+La+Paz`;
         }
 
-        if (['coordinacion', 'confirmacion', 'recordatorio', 'reagendamiento', 'protocolo'].includes(templateId)) {
-            message += `\n\n*Guía de Protocolo:*`;
-            message += `\nhttps://edtech-studio.page.gd/docs/Guia-Protocolo_V4.pdf`;
+        if (['confirmacion', 'protocolo'].includes(templateId)) {
+            message += `\n\n👗 *Guía de Vestuario:*\nhttps://edtech-studio.page.gd/docs/Guia-Protocolo_V4.pdf`;
         }
 
         let finalPhone = phone;
