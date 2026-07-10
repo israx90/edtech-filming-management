@@ -34,6 +34,9 @@
     --purple-bg: rgba(167, 139, 250, 0.15);
     --pink: #f472b6;
     --pink-bg: rgba(244, 114, 182, 0.15);
+    --orange: #fb923c;
+    --orange-bg: rgba(251, 146, 60, 0.15);
+    --orange-border: rgba(251, 146, 60, 0.5);
 
     --radius-sm: 4px;
     --radius: 6px;
@@ -303,6 +306,10 @@ input[type="time"]:hover { background-image: url("data:image/svg+xml,%3Csvg xmln
 .cal-event.status-in_progress { background: var(--accent-bg); color: var(--accent); border-left: 2px solid var(--accent); }
 .cal-event.status-completed { background: var(--green-bg); color: var(--green); border-left: 2px solid var(--green); }
 .cal-event.status-cancelled { background: var(--red-bg); color: var(--red); border-left: 2px solid var(--red); text-decoration: line-through; }
+/* Academy sessions — bright orange, distinct from all other types */
+.cal-event.academy { background: var(--orange-bg) !important; color: var(--orange) !important; border-left: 3px solid var(--orange) !important; }
+.cal-event.academy .cal-event-code { color: var(--orange); }
+.cal-event.academy .cal-event-time { color: var(--orange); opacity: 0.85; }
 .cal-event.session-cancelled { opacity: 0.6; border-left: 2px solid #ef4444 !important; border-style: dashed !important; filter: grayscale(0.4); }
 .cal-event.session-cancelled .cal-event-teacher { text-decoration: line-through; opacity: 0.7; }
 

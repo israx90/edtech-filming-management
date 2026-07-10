@@ -195,7 +195,8 @@ const Calendar = {
         const renderSession = (session) => {
             const ev = document.createElement('div');
             const isCancelled = session.status === 'cancelled';
-            ev.className = `cal-event status-${session.assignment_status || 'in_progress'}${isCancelled ? ' session-cancelled' : ''}`;
+            const isAcademy = session.career && session.career.toLowerCase().includes('academy');
+            ev.className = `cal-event status-${session.assignment_status || 'in_progress'}${isCancelled ? ' session-cancelled' : ''}${isAcademy ? ' academy' : ''}`;
             const typeColors = {
                 'Teórica':   { bg: 'rgba(96,165,250,0.2)', color: '#60a5fa' },
                 'Numérica':  { bg: 'rgba(52,211,153,0.2)', color: '#34d399' },
@@ -235,7 +236,7 @@ const Calendar = {
                 </div>
                 <div class="cal-event-subject" style="${isCancelled ? 'text-decoration:line-through;opacity:0.6;' : ''}">
                     ${session.subject_name} ${typeTag}
-                    ${session.career && session.career.toLowerCase().includes('academy') ? `<span style="display:inline-block;background:var(--cyan-bg, rgba(34,211,238,0.15));color:var(--cyan, #22d3ee);font-size:9px;padding:1px 5px;border-radius:3px;font-weight:600;margin-top:2px;">${session.career}</span>` : ''}
+                    ${isAcademy ? `<span style="display:inline-block;background:var(--orange-bg);color:var(--orange);font-size:9px;padding:1px 6px;border-radius:3px;font-weight:700;margin-top:2px;border:1px solid var(--orange-border);">&#127891; ACADEMY</span>` : ''}
                 </div>
                 <div class="cal-event-teacher">${externalBadge}${session.teacher_name}</div>
             `;
