@@ -967,7 +967,7 @@ PSI-220 Psicología General,Psicología"></textarea>
             </div>
             <!-- Displacement Toggle (unified with reservation modal) -->
             <div class="form-row" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:4px;">
-                <label style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0;">
+                <div style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0;">
                     <span>
                         <input type="checkbox" id="input-new-session-displacement" style="display:none;">
                         <span class="session-disp-switch" id="session-disp-switch-visual" onclick="Modals.toggleSessionDisplacement()" style="display:inline-flex;align-items:center;width:44px;height:24px;border-radius:12px;background:var(--border);position:relative;cursor:pointer;transition:background 0.25s;flex-shrink:0;">
@@ -978,7 +978,7 @@ PSI-220 Psicología General,Psicología"></textarea>
                         <span style="font-weight:600;color:var(--text-primary);font-size:13px;">Desplazamiento — Llevar equipo</span>
                         <span style="font-size:11px;color:var(--text-secondary);">Se debe transportar equipo de grabación — el estudio <strong id="session-disp-status-text">queda ocupado</strong></span>
                     </span>
-                </label>
+                </div>
             </div>
         </div>
         <div class="modal-footer">
@@ -1098,7 +1098,7 @@ PSI-220 Psicología General,Psicología"></textarea>
 
             <!-- Displacement Toggle (unified style) -->
             <div class="form-row" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:8px;">
-                <label style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0;">
+                <div style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0;">
                     <span>
                         <input type="checkbox" id="input-edit-session-displacement" style="display:none;">
                         <span id="edit-session-disp-switch" onclick="Modals.toggleEditSessionDisplacement()" style="display:inline-flex;align-items:center;width:44px;height:24px;border-radius:12px;background:var(--border);position:relative;cursor:pointer;transition:background 0.25s;flex-shrink:0;">
@@ -1109,7 +1109,7 @@ PSI-220 Psicología General,Psicología"></textarea>
                         <span style="font-weight:600;color:var(--text-primary);font-size:13px;">Desplazamiento — Llevar equipo</span>
                         <span style="font-size:11px;color:var(--text-secondary);">Se debe transportar equipo de grabación — el estudio <strong id="edit-session-disp-status">queda ocupado</strong></span>
                     </span>
-                </label>
+                </div>
             </div>
         </div>
         <div class="modal-footer">
@@ -1224,7 +1224,7 @@ PSI-220 Psicología General,Psicología"></textarea>
 
             <!-- Displacement Toggle -->
             <div class="form-row" id="displacement-row" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:4px;">
-                <label style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0;">
+                <div style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0;">
                     <span class="displacement-toggle-wrap">
                         <input type="checkbox" id="input-res-displacement" style="display:none;">
                         <span class="displacement-switch" id="displacement-switch-visual" onclick="Modals.toggleDisplacement()" style="display:inline-flex;align-items:center;width:44px;height:24px;border-radius:12px;background:var(--border);position:relative;cursor:pointer;transition:background 0.25s;flex-shrink:0;">
@@ -1235,7 +1235,7 @@ PSI-220 Psicología General,Psicología"></textarea>
                         <span style="font-weight:600;color:var(--text-primary);font-size:13px;">Desplazamiento</span>
                         <span style="font-size:11px;color:var(--text-secondary);">El equipo sale del estudio — el estudio <strong id="displacement-status-text">queda ocupado</strong></span>
                     </span>
-                </label>
+                </div>
                 <div id="displacement-info" style="display:none;margin-top:10px;padding:8px 12px;border-radius:6px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);">
                     <span style="color:#fbbf24;font-size:12px;font-weight:600;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;vertical-align:-2px"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> El estudio quedará LIBRE durante este horario</span>
                     <div style="color:var(--text-secondary);font-size:11px;margin-top:3px;">Otros podrán usar las instalaciones o solicitar reuniones</div>
