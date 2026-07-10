@@ -1064,6 +1064,37 @@ PSI-220 Psicología General,Psicología"></textarea>
                 <label for="input-edit-session-notes">Notas</label>
                 <textarea id="input-edit-session-notes" class="input textarea" rows="2" placeholder="Observaciones..."></textarea>
             </div>
+
+            <!-- Staff Assignment -->
+            <div style="margin-top:12px;">
+                <label id="edit-staff-morning-label" style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Staff</label>
+                <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:8px;">
+                    <div class="form-row">
+                        <label for="input-edit-session-staff-1" style="font-size:11px;">Principal</label>
+                        <select id="input-edit-session-staff-1" class="input select"><option value="">-- Sin asignar --</option></select>
+                    </div>
+                    <div class="form-row">
+                        <label for="input-edit-session-staff-2" style="font-size:11px;">Asistente</label>
+                        <select id="input-edit-session-staff-2" class="input select"><option value="">-- Sin asignar --</option></select>
+                    </div>
+                </div>
+            </div>
+            <div id="edit-staff-afternoon-block" style="display:none;margin-top:8px;">
+                <label style="font-size:11px;font-weight:600;color:var(--amber);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:4px;margin-bottom:6px;">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 18a5 5 0 0 0-10 0"/><line x1="12" y1="2" x2="12" y2="9"/></svg>
+                    Tarde
+                </label>
+                <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:8px;">
+                    <div class="form-row">
+                        <label for="input-edit-session-staff-3" style="font-size:11px;">Principal</label>
+                        <select id="input-edit-session-staff-3" class="input select"><option value="">-- Sin asignar --</option></select>
+                    </div>
+                    <div class="form-row">
+                        <label for="input-edit-session-staff-4" style="font-size:11px;">Asistente</label>
+                        <select id="input-edit-session-staff-4" class="input select"><option value="">-- Sin asignar --</option></select>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" data-close-modal>Cancelar</button>

@@ -615,13 +615,48 @@ app.put('/api/reservations/:id', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
   if (!requireAuth(user, res)) return;
   const id = parseInt(req.params.id);
-  const { start_date, start_time, end_time, reason, is_displacement, attendees } = req.body;
-  if (start_date !== undefined) await execute('UPDATE reservations SET date = ? WHERE id = ?', [start_date, id]);
-  if (start_time !== undefined) await execute('UPDATE reservations SET start_time = ? WHERE id = ?', [start_time, id]);
-  if (end_time !== undefined) await execute('UPDATE reservations SET end_time = ? WHERE id = ?', [end_time, id]);
-  if (reason !== undefined) await execute('UPDATE reservations SET reason = ? WHERE id = ?', [reason, id]);
-  if (is_displacement !== undefined) await execute('UPDATE reservations SET is_displacement = ? WHERE id = ?', [!!is_displacement, id]);
-  if (attendees !== undefined) await execute('UPDATE reservations SET attendees = ? WHERE id = ?', [attendees, id]);
+  const { start_date, end_date, start_time, end_time, reason, is_displacement, attendees } = req.body;
+
+  // Get the original row to find all sibling rows of this multi-day reservation
+  const original = await queryOne('SELECT * FROM reservations WHERE id = ?', [id]);
+  if (!original) return res.status(404).json({ error: 'Reserva no encontrada' });
+
+  // Find all sibling rows (same user, same time, same reason = same reservation)
+  const siblings = await queryAll(
+    'SELECT id FROM reservations WHERE user_id = ? AND start_time = ? AND end_time = ? AND reason = ?',
+    [original.user_id, original.start_time, original.end_time, original.reason]
+  );
+  const siblingIds = siblings.map(s => s.id);
+
+  // If date range changed, delete old rows and recreate
+  if (start_date !== undefined && end_date !== undefined) {
+    // Delete all old sibling rows
+    if (siblingIds.length > 0) {
+      await execute(`DELETE FROM reservations WHERE id IN (${siblingIds.map(() => '?').join(',')})`, siblingIds);
+    }
+    // Recreate for new date range
+    const current = new Date(start_date);
+    const last = new Date(end_date);
+    while (current <= last) {
+      const dStr = current.toISOString().split('T')[0];
+      await execute('INSERT INTO reservations (user_id, date, start_time, end_time, reason, is_displacement, attendees) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [original.user_id, dStr, start_time || original.start_time, end_time || original.end_time, reason !== undefined ? reason : original.reason, is_displacement !== undefined ? !!is_displacement : !!original.is_displacement, attendees !== undefined ? attendees : original.attendees]);
+      current.setDate(current.getDate() + 1);
+    }
+  } else {
+    // No date range change — update all sibling rows in place
+    const updates = [];
+    const updateAll = async (field, value) => {
+      if (siblingIds.length > 0) {
+        await execute(`UPDATE reservations SET ${field} = ? WHERE id IN (${siblingIds.map(() => '?').join(',')})`, [value, ...siblingIds]);
+      }
+    };
+    if (start_time !== undefined) await updateAll('start_time', start_time);
+    if (end_time !== undefined) await updateAll('end_time', end_time);
+    if (reason !== undefined) await updateAll('reason', reason);
+    if (is_displacement !== undefined) await updateAll('is_displacement', !!is_displacement);
+    if (attendees !== undefined) await updateAll('attendees', attendees);
+  }
   res.json({ success: true });
 }));
 app.delete('/api/reservations/:id', asyncHandler(async (req, res) => {
