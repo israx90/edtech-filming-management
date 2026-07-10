@@ -755,63 +755,64 @@ PSI-220 Psicología General,Psicología"></textarea>
                 </select>
             </div>
             <div class="divider"></div>
-            <h4 class="form-section-title">Primera Sesión de Grabación</h4>
-            <div class="form-grid form-grid-3">
-                <div class="form-row" style="grid-column: 1 / -1;">
-                    <label>Fecha</label>
-                    <!-- Hidden value holder — still read by saveAssignment() -->
+            <h4 class="form-section-title" style="margin-bottom:8px;">Primera Sesión de Grabación</h4>
+            <!-- 2-col layout: calendar left, controls right -->
+            <div style="display:grid;grid-template-columns:1fr 180px;gap:12px;align-items:start;">
+                <!-- LEFT: Availability calendar -->
+                <div>
+                    <label style="font-size:11px;color:var(--text-muted);margin-bottom:4px;display:block;">Fecha</label>
                     <input type="hidden" id="input-session-date">
-                    <!-- Availability calendar widget -->
-                    <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;padding:12px;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                            <button type="button" onclick="Modals.assignCalPrev()" style="background:none;border:none;color:var(--text-secondary);font-size:18px;cursor:pointer;padding:2px 8px;border-radius:4px;">&#8249;</button>
-                            <span id="assign-cal-title" style="font-size:13px;font-weight:700;color:var(--text-primary);">—</span>
-                            <button type="button" onclick="Modals.assignCalNext()" style="background:none;border:none;color:var(--text-secondary);font-size:18px;cursor:pointer;padding:2px 8px;border-radius:4px;">&#8250;</button>
+                    <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:8px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                            <button type="button" onclick="Modals.assignCalPrev()" style="background:none;border:none;color:var(--text-secondary);font-size:16px;cursor:pointer;padding:1px 6px;border-radius:4px;">&#8249;</button>
+                            <span id="assign-cal-title" style="font-size:12px;font-weight:700;color:var(--text-primary);">—</span>
+                            <button type="button" onclick="Modals.assignCalNext()" style="background:none;border:none;color:var(--text-secondary);font-size:16px;cursor:pointer;padding:1px 6px;border-radius:4px;">&#8250;</button>
                         </div>
-                        <div id="assign-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;"></div>
-                        <div id="assign-cal-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:10px;color:var(--text-muted);">
-                            <span style="display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(34,197,94,0.25);"></span>Libre</span>
-                            <span style="display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:linear-gradient(to right,rgba(239,68,68,0.3) 50%,rgba(34,197,94,0.25) 50%);"></span>M. ocupada</span>
-                            <span style="display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:linear-gradient(to right,rgba(34,197,94,0.25) 50%,rgba(245,158,11,0.3) 50%);"></span>T. ocupada</span>
-                            <span style="display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(239,68,68,0.22);"></span>Completo</span>
+                        <div id="assign-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;"></div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:9px;color:var(--text-muted);">
+                            <span style="display:flex;align-items:center;gap:3px;"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:rgba(34,197,94,0.25);"></span>Libre</span>
+                            <span style="display:flex;align-items:center;gap:3px;"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:linear-gradient(to right,rgba(239,68,68,0.3) 50%,rgba(34,197,94,0.25) 50%);"></span>M.ocup</span>
+                            <span style="display:flex;align-items:center;gap:3px;"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:linear-gradient(to right,rgba(34,197,94,0.25) 50%,rgba(245,158,11,0.3) 50%);"></span>T.ocup</span>
+                            <span style="display:flex;align-items:center;gap:3px;"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:rgba(239,68,68,0.22);"></span>Lleno</span>
                         </div>
-                        <div id="assign-cal-selected" style="display:none;margin-top:8px;font-size:11px;font-weight:600;padding:6px 8px;background:var(--bg-card);border-radius:6px;"></div>
+                        <div id="assign-cal-selected" style="display:none;margin-top:6px;font-size:10px;font-weight:600;padding:4px 6px;background:var(--bg-card);border-radius:5px;line-height:1.4;"></div>
                     </div>
                 </div>
-                <div class="form-row">
-                    <label for="input-session-start">Hora Inicio</label>
-                    <input type="time" id="input-session-start" class="input" value="08:00">
-                </div>
-                <div class="form-row">
-                    <label for="input-session-end">Hora Fin</label>
-                    <input type="time" id="input-session-end" class="input" value="10:00">
-                </div>
-            </div>
-            <div class="form-grid">
-                <div class="form-row">
-                    <label for="input-session-hito">Hito Alcanzado</label>
-                    <select id="input-session-hito" class="input select">
-                        <option value="">Sin definir aún</option>
-                        <option value="pagina_inicio">Página de Inicio</option>
-                        <option value="hito_2">Hito II</option>
-                        <option value="hito_3">Hito III</option>
-                        <option value="hito_4">Hito IV</option>
-                        <option value="hito_5">Hito V</option>
-                        <option value="semanas">Semanas</option>
-                    </select>
-                </div>
-                <div class="form-row">
-                    <label for="input-script-status">Estado del Guión</label>
-                    <select id="input-script-status" class="input select">
-                        <option value="not_uploaded">Sin Guión</option>
-                        <option value="guion_pendiente">GUION PENDIENTE</option>
-                        <option value="guion_revisado">GUION REVISADO</option>
-                        <option value="uploaded_hito_v">Cargado (Hito V)</option>
-                        <option value="pending_review">Pendiente de Revisión</option>
-                        <option value="in_review">En Revisión</option>
-                        <option value="needs_corrections">Requiere Correcciones</option>
-                        <option value="approved">Revisado</option>
-                    </select>
+                <!-- RIGHT: Controls stacked -->
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <div class="form-row" style="margin:0;">
+                        <label for="input-session-start" style="font-size:11px;">Hora Inicio</label>
+                        <input type="time" id="input-session-start" class="input" value="08:00" style="padding:6px 8px;font-size:13px;">
+                    </div>
+                    <div class="form-row" style="margin:0;">
+                        <label for="input-session-end" style="font-size:11px;">Hora Fin</label>
+                        <input type="time" id="input-session-end" class="input" value="10:00" style="padding:6px 8px;font-size:13px;">
+                    </div>
+                    <div class="form-row" style="margin:0;">
+                        <label for="input-session-hito" style="font-size:11px;">Hito</label>
+                        <select id="input-session-hito" class="input select" style="padding:6px 8px;font-size:12px;">
+                            <option value="">Sin definir</option>
+                            <option value="pagina_inicio">Pág. Inicio</option>
+                            <option value="hito_2">Hito II</option>
+                            <option value="hito_3">Hito III</option>
+                            <option value="hito_4">Hito IV</option>
+                            <option value="hito_5">Hito V</option>
+                            <option value="semanas">Semanas</option>
+                        </select>
+                    </div>
+                    <div class="form-row" style="margin:0;">
+                        <label for="input-script-status" style="font-size:11px;">Guión</label>
+                        <select id="input-script-status" class="input select" style="padding:6px 8px;font-size:12px;">
+                            <option value="not_uploaded">Sin Guión</option>
+                            <option value="guion_pendiente">Pendiente</option>
+                            <option value="guion_revisado">Revisado</option>
+                            <option value="uploaded_hito_v">Cargado (Hito V)</option>
+                            <option value="pending_review">Pend. Revisión</option>
+                            <option value="in_review">En Revisión</option>
+                            <option value="needs_corrections">Con Correcciones</option>
+                            <option value="approved">Aprobado</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 

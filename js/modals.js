@@ -2042,9 +2042,9 @@ const Modals = {
 
             const cell = document.createElement('div');
             cell.style.cssText = `
-                border-radius: 6px;
-                padding: 5px 2px;
-                font-size: 12px;
+                border-radius: 4px;
+                padding: 3px 1px;
+                font-size: 11px;
                 font-weight: 600;
                 cursor: ${isBlocked ? 'default' : 'pointer'};
                 opacity: ${(isPast || isWeekend) ? '0.3' : (isBlocked ? '0.55' : '1')};
