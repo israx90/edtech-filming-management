@@ -1,15 +1,21 @@
 require('dotenv').config();
 const mysql = require('mysql2/promise');
-const fs = require('fs');
-const path = require('path');
 
-const logFile = path.join(__dirname, '..', 'sql_logs.txt');
+// SQL logging — only in development (avoid disk writes on Vercel/serverless)
+const IS_DEV = process.env.NODE_ENV !== 'production';
+let fs, path, logFile;
+if (IS_DEV) {
+  fs = require('fs');
+  path = require('path');
+  logFile = path.join(__dirname, '..', 'sql_logs.txt');
+}
 
 function logQuery(sql, params) {
+  if (!IS_DEV || !fs) return;
   const timestamp = new Date().toISOString();
   const logEntry = `[${timestamp}] SQL: ${sql}\nPARAMS: ${JSON.stringify(params)}\n\n`;
   fs.appendFile(logFile, logEntry, err => {
-    if (err) console.error('Failed to write SQL log:', err);
+    if (err) {} // Silent — never crash for logging
   });
 }
 

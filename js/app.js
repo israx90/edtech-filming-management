@@ -500,11 +500,7 @@ const SCRIPT_LABELS = {
     pending_review:    'Pendiente de Revisión',
     in_review:         'En Revisión',
     needs_corrections: 'Requiere Correcciones',
-    approved:          'Revisado',
-    // Backwards compat for old data
-    pending:     'Pendiente (legacy)',
-    in_progress: 'En Progreso (legacy)',
-    completed:   'Terminado (legacy)'
+    approved:          'Revisado'
 };
 
 const SCRIPT_COLORS = {
@@ -515,11 +511,17 @@ const SCRIPT_COLORS = {
     pending_review:    { bg: 'rgba(251,191,36,0.15)',  color: '#fbbf24' },
     in_review:         { bg: 'rgba(167,139,250,0.15)', color: '#a78bfa' },
     needs_corrections: { bg: 'rgba(248,113,113,0.15)', color: '#f87171' },
-    approved:          { bg: 'rgba(52,211,153,0.15)',  color: '#34d399' },
-    pending:           { bg: 'rgba(148,163,184,0.15)', color: '#94a3b8' },
-    in_progress:       { bg: 'rgba(96,165,250,0.15)',  color: '#60a5fa' },
-    completed:         { bg: 'rgba(52,211,153,0.15)',  color: '#34d399' }
+    approved:          { bg: 'rgba(52,211,153,0.15)',  color: '#34d399' }
 };
+
+
+// Centralised subject type colors — used in both Goals and Calendar
+const SUBJECT_TYPE_COLORS = {
+    'Teórica':             { bg: 'rgba(226,232,240,0.15)', color: '#cbd5e1' },
+    'Numérica':            { bg: 'rgba(52,211,153,0.2)',   color: '#34d399' },
+    'Proyecto Integrador': { bg: 'rgba(251,191,36,0.15)',  color: '#fbbf24' }
+};
+
 
 // ================================================
 // Goals management
@@ -577,12 +579,7 @@ const Goals = {
             const canEdit = App.user && ['admin', 'post_productor'].includes(App.user.role);
 
             const typeLabel = s.subject_type || 'Teórica';
-            const typeColors = {
-                'Teórica':   { bg: 'rgba(96,165,250,0.15)', color: '#60a5fa' },
-                'Numérica':  { bg: 'rgba(52,211,153,0.15)', color: '#34d399' },
-                'Proyecto Integrador': { bg: 'rgba(167,139,250,0.15)', color: '#a78bfa' }
-            };
-            const tc = typeColors[typeLabel] || typeColors['Teórica'];
+            const tc = SUBJECT_TYPE_COLORS[typeLabel] || SUBJECT_TYPE_COLORS['Teórica'];
 
             html += `<div class="subject-item" data-id="${s.id}">
                 <span class="subject-code">${s.code}</span>

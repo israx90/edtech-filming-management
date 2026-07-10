@@ -1,10 +1,10 @@
 // ================================================
-// EDTECH Studio — Service Worker v4.0
+// EDTECH Studio — Service Worker v5.0
 // Estrategia: Network-first para JS/CSS, Cache-first para imágenes
 // ================================================
 
-const CACHE_NAME = 'edtech-studio-v4';
-const STATIC_CACHE = 'edtech-static-v4';
+const CACHE_NAME = 'edtech-studio-v5';
+const STATIC_CACHE = 'edtech-static-v5';
 
 // Rutas de API — nunca se cachean
 const API_ROUTES = ['/api/'];

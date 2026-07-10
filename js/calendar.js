@@ -197,12 +197,7 @@ const Calendar = {
             const isCancelled = session.status === 'cancelled';
             const isAcademy = session.career && session.career.toLowerCase().includes('academy');
             ev.className = `cal-event status-${session.assignment_status || 'in_progress'}${isCancelled ? ' session-cancelled' : ''}${isAcademy ? ' academy' : ''}`;
-            const typeColors = {
-                'Teórica':   { bg: 'rgba(226,232,240,0.15)', color: '#cbd5e1' },
-                'Numérica':  { bg: 'rgba(52,211,153,0.2)', color: '#34d399' },
-                'Proyecto Integrador': { bg: 'rgba(251,191,36,0.15)', color: '#fbbf24' }
-            };
-            const tc = typeColors[session.subject_type] || typeColors['Teórica'];
+            const tc = SUBJECT_TYPE_COLORS[session.subject_type] || SUBJECT_TYPE_COLORS['Teórica'];
             const typeTag = session.subject_type
                 ? `<span style="display:inline-block;background:${tc.bg};color:${tc.color};font-size:9px;padding:1px 5px;border-radius:3px;font-weight:600;margin-top:2px;">${session.subject_type}</span>`
                 : '';

@@ -383,30 +383,6 @@ app.post('/api/subjects/deduplicate', asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Duplicados eliminados correctamente' });
 }));
 
-app.post('/api/emergency-restore', asyncHandler(async (req, res) => {
-  const user = await getAuthUser(req);
-  if (!requireAdmin(user, res)) return;
-  const { semester_id } = req.body;
-  
-  // 1. Recreate 'La vía voluntaria notarial'
-  const newSubjectId = await execute(
-    'INSERT INTO subjects (code, name, subject_type, career, semester_id) VALUES (?, ?, ?, ?, ?)',
-    ['EXT', 'La vía voluntaria notarial', 'Teórica', 'Academy', semester_id]
-  );
-  
-  // 2. Find BlockChain subject
-  const bc = await queryOne('SELECT id FROM subjects WHERE name = "BlockChain" AND semester_id = ? ORDER BY id DESC LIMIT 1', [semester_id]);
-  if (bc) {
-    // 3. Move the oldest assignment from BlockChain to La via
-    // Assuming La via's assignment was created before BlockChain's (or we just move one of them)
-    const assignments = await queryAll('SELECT id FROM filming_assignments WHERE subject_id = ? ORDER BY id ASC', [bc.id]);
-    if (assignments.length > 1) {
-      // Move the first one back
-      await execute('UPDATE filming_assignments SET subject_id = ? WHERE id = ?', [newSubjectId, assignments[0].id]);
-    }
-  }
-  res.json({ success: true, restored_id: newSubjectId });
-}));
 
 // --- ASSIGNMENTS ---
 app.get('/api/assignments', asyncHandler(async (req, res) => {
@@ -936,35 +912,6 @@ app.post('/api/public/meeting-request', asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, id });
 }));
 
-app.get('/api/availability/:date', asyncHandler(async (req, res) => {
-  const user = await getAuthUser(req);
-  if (!requireAuth(user, res)) return;
-  const date = req.params.date;
-  const d = new Date(date + 'T12:00:00');
-  const dow = d.getDay();
-  const monOff = dow === 0 ? -6 : 1 - dow;
-  const mon = new Date(d); mon.setDate(d.getDate() + monOff);
-  const closed = await queryOne('SELECT * FROM closed_weeks WHERE week_start = ?', [mon.toISOString().split('T')[0]]);
-  if (closed) return res.json({ closed: true, reason: closed.reason, slots: [] });
-
-  const stRow = await queryOne("SELECT value FROM settings WHERE key = 'studio_start_time'");
-  const etRow = await queryOne("SELECT value FROM settings WHERE key = 'studio_end_time'");
-  const startH = parseInt((stRow?.value || '08:00').split(':')[0]);
-  const endH = parseInt((etRow?.value || '18:00').split(':')[0]);
-  const existing = await queryAll("SELECT rs.start_time, rs.end_time, fa.teacher_name, s.code as subject_code FROM recording_sessions rs JOIN filming_assignments fa ON fa.id = rs.assignment_id JOIN subjects s ON s.id = fa.subject_id WHERE rs.session_date = ? ORDER BY rs.start_time ASC", [date]);
-
-  const slots = [];
-  const pad = n => String(n).padStart(2, '0');
-  for (let h = startH; h < endH; h++) {
-    const ss = `${pad(h)}:00`; const se = `${pad(h+1)}:00`;
-    const occ = existing.find(s => {
-      const st = s.start_time?.substring(0,5); const et = s.end_time?.substring(0,5);
-      return (ss >= st && ss < et) || (se > st && se <= et);
-    });
-    slots.push({ start: ss, end: se, available: !occ, session: occ || null });
-  }
-  res.json({ closed: false, slots, existingSessions: existing });
-}));
 
 // ================================================
 // Holidays (Feriados)
