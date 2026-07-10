@@ -303,13 +303,14 @@ input[type="time"]:hover { background-image: url("data:image/svg+xml,%3Csvg xmln
 .cal-event-teacher { font-size: 9px; text-align: right; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .cal-event:hover { filter: brightness(1.2); transform: translateY(-1px); }
-.cal-event.status-in_progress { background: var(--accent-bg); color: var(--accent); border-left: 2px solid var(--accent); }
+.cal-event.status-in_progress { background: var(--purple-bg); color: var(--purple); border-left: 2px solid var(--purple); }
 .cal-event.status-completed { background: var(--green-bg); color: var(--green); border-left: 2px solid var(--green); }
 .cal-event.status-cancelled { background: var(--red-bg); color: var(--red); border-left: 2px solid var(--red); text-decoration: line-through; }
-/* Academy sessions — bright orange, distinct from all other types */
-.cal-event.academy { background: var(--orange-bg) !important; color: var(--orange) !important; border-left: 3px solid var(--orange) !important; }
-.cal-event.academy .cal-event-code { color: var(--orange); }
-.cal-event.academy .cal-event-time { color: var(--orange); opacity: 0.85; }
+/* Academy sessions — cyan/celeste, clearly distinct */
+.cal-event.academy { background: var(--cyan-bg) !important; color: var(--cyan) !important; border-left: 3px solid var(--cyan) !important; }
+.cal-event.academy .cal-event-code { color: var(--cyan); }
+.cal-event.academy .cal-event-time { color: var(--cyan); opacity: 0.85; }
+
 .cal-event.session-cancelled { opacity: 0.6; border-left: 2px solid #ef4444 !important; border-style: dashed !important; filter: grayscale(0.4); }
 .cal-event.session-cancelled .cal-event-teacher { text-decoration: line-through; opacity: 0.7; }
 
@@ -318,9 +319,9 @@ input[type="time"]:hover { background-image: url("data:image/svg+xml,%3Csvg xmln
 .cal-event.is-fullday .cal-event-subject span { background: rgba(251, 191, 36, 0.15) !important; color: var(--amber) !important; }
 
 .cal-event.reservation {
-    background: var(--purple-bg);
-    color: var(--purple);
-    border-left: 2px solid var(--purple);
+    background: var(--orange-bg);
+    color: var(--orange);
+    border-left: 2px solid var(--orange);
 }
 .cal-event.reservation.displacement {
     background: var(--pink-bg) !important;

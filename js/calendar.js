@@ -236,7 +236,7 @@ const Calendar = {
                 </div>
                 <div class="cal-event-subject" style="${isCancelled ? 'text-decoration:line-through;opacity:0.6;' : ''}">
                     ${session.subject_name} ${typeTag}
-                    ${isAcademy ? `<span style="display:inline-block;background:var(--orange-bg);color:var(--orange);font-size:9px;padding:1px 6px;border-radius:3px;font-weight:700;margin-top:2px;border:1px solid var(--orange-border);">&#127891; ACADEMY</span>` : ''}
+                    ${isAcademy ? `<span style="display:inline-block;background:var(--cyan-bg);color:var(--cyan);font-size:9px;padding:1px 6px;border-radius:3px;font-weight:700;margin-top:2px;border:1px solid rgba(34,211,238,0.35);">&#127891; ACADEMY</span>` : ''}
                 </div>
                 <div class="cal-event-teacher">${externalBadge}${session.teacher_name}</div>
             `;
