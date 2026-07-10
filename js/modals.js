@@ -1021,10 +1021,21 @@ const Modals = {
     async openEditReservation(r) {
         this.currentReservationId = r.id;
         
-        document.getElementById('input-res-date').value = r.date;
-        document.getElementById('input-res-end-date').value = r.date;
+        // Find the full date range of this multi-day reservation from sibling rows
+        const siblings = (Calendar.reservations || []).filter(r2 =>
+            r2.user_id === r.user_id &&
+            r2.start_time === r.start_time &&
+            r2.end_time === r.end_time &&
+            r2.reason === r.reason
+        );
+        const siblingDates = siblings.map(r2 => typeof r2.date === 'string' ? r2.date.substring(0, 10) : r2.date).sort();
+        const rangeStart = siblingDates[0] || r.date;
+        const rangeEnd = siblingDates[siblingDates.length - 1] || r.date;
+
+        document.getElementById('input-res-date').value = rangeStart;
+        document.getElementById('input-res-end-date').value = rangeEnd;
         document.getElementById('input-res-end-date').parentElement.style.display = 'block';
-        
+
         // Convert to selects
         ['input-res-start', 'input-res-end'].forEach(id => this.convertToTimeSelect(id));
         document.getElementById('input-res-start').value = r.start_time.substring(0, 5);
