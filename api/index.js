@@ -507,10 +507,11 @@ app.get('/api/sessions/availability', asyncHandler(async (req, res) => {
   const reservations = await queryAll("SELECT date, start_time, end_time FROM reservations WHERE is_displacement = 0 AND EXTRACT(YEAR FROM date) = ? AND EXTRACT(MONTH FROM date) = ?", [year, month]);
   const result = {};
   const pad = n => String(n).padStart(2, '0');
+  // Filter out displacement sessions once (they don't block the studio)
+  const nonDispSessions = sessions.filter(s => !s.is_displacement || s.is_displacement == 0);
   for (let day = 1; day <= new Date(year, month, 0).getDate(); day++) {
     const dateStr = `${year}-${pad(month)}-${pad(day)}`;
     let morningBusy = false, afternoonBusy = false;
-    const nonDispSessions = sessions.filter(s => !s.is_displacement || s.is_displacement == 0);
     [...nonDispSessions, ...reservations.map(r => ({ session_date: r.date, start_time: r.start_time, end_time: r.end_time }))].forEach(s => {
       if (s.session_date !== dateStr) return;
       if (s.start_time?.substring(0,5) < '13:00') morningBusy = true;
