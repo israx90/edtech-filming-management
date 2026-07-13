@@ -356,8 +356,8 @@ _Por favor, guarda estos datos de forma segura._`;
         list.innerHTML = filtered.map((h, i) => {
             const isFixed = h.is_fixed;
             const typeBadge = isFixed
-                ? `<span title="Fijo: aplica cada año" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(96,165,250,0.15);color:#60a5fa;">🔁 Fijo</span>`
-                : `<span title="Móvil: solo ese año" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(167,139,250,0.15);color:#a78bfa;">📅 Móvil</span>`;
+                ? `<span title="Fijo: aplica cada año" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(96,165,250,0.15);color:#60a5fa;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Fijo</span>`
+                : `<span title="Móvil: solo ese año" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(167,139,250,0.15);color:#a78bfa;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Móvil</span>`;
             const bgStyle = i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-elevated)';
             return `
                 <div style="display:grid;grid-template-columns:70px 110px 1fr 48px;gap:0;padding:9px 12px;background:${bgStyle};border-bottom:1px solid var(--border-light);align-items:center;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='${bgStyle}'">

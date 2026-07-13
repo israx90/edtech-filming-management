@@ -1269,12 +1269,12 @@ const Modals = {
             </div>
             <div class="detail-field" style="${(data.sede && !['la paz', 'el alto'].includes(data.sede.trim().toLowerCase())) ? '' : 'display:none;'}">
                 <div class="detail-field-label">Pasaje de Vuelo</div>
-                <div class="detail-field-value">${data.flight_ticket_path ? `<a href="/api${data.flight_ticket_path}" target="_blank" class="btn-sm btn-outline">📄 Ver PDF</a>` : '<span style="color:var(--text-muted)">No subido</span>'}</div>
+                <div class="detail-field-value">${data.flight_ticket_path ? `<a href="/api${data.flight_ticket_path}" target="_blank" class="btn-sm btn-outline"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Ver PDF</a>` : '<span style="color:var(--text-muted)">No subido</span>'}</div>
             </div>
 
         <div class="detail-field">
                 <div class="detail-field-label">Link del Guión</div>
-                <div class="detail-field-value">${data.drive_link ? `<a href="${data.drive_link}" target="_blank">Abrir en Drive ↗</a>` : '—'}</div>
+                <div class="detail-field-value">${data.drive_link ? `<a href="${data.drive_link}" target="_blank">Abrir en Drive <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-left:2px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : '—'}</div>
             </div>
             <div class="detail-field">
                 <div class="detail-field-label">Estado</div>
@@ -2062,7 +2062,7 @@ const Modals = {
             } else if (holidayName) {
                 cell.style.background = 'rgba(245,158,11,0.18)';
                 cell.style.color = 'var(--amber)';
-                cell.title = `🎉 Feriado: ${holidayName}`;
+                cell.title = `Feriado: ${holidayName}`;
             } else if (status === 'full') {
                 cell.style.background = 'rgba(239,68,68,0.22)';
                 cell.style.color = '#ef4444';
@@ -2101,9 +2101,9 @@ const Modals = {
                     const dObj = new Date(dateStr + 'T12:00:00');
                     let avail = '';
                     let availColor = 'var(--green)';
-                    if (status === 'morning_busy') { avail = '☀️ Mañana ocupada · 🌙 Tarde libre (13:00–20:00)'; availColor = '#22c55e'; }
-                    else if (status === 'afternoon_busy') { avail = '☀️ Mañana libre (08:00–13:00) · 🌙 Tarde ocupada'; availColor = '#f59e0b'; }
-                    else { avail = '✅ Día completamente libre'; availColor = '#22c55e'; }
+                    if (status === 'morning_busy') { avail = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>Mañana ocupada · <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;margin-left:4px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>Tarde libre (13:00–20:00)'; availColor = '#22c55e'; }
+                    else if (status === 'afternoon_busy') { avail = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>Mañana libre (08:00–13:00) · <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;margin-left:4px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>Tarde ocupada'; availColor = '#f59e0b'; }
+                    else { avail = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Día completamente libre'; availColor = '#22c55e'; }
 
                     const display = document.getElementById('assign-cal-selected');
                     if (display) {
@@ -2198,7 +2198,7 @@ const Modals = {
             } else if (holidayName) {
                 cell.style.background = 'rgba(245,158,11,0.18)';
                 cell.style.color = 'var(--amber)';
-                cell.title = `🎉 Feriado: ${holidayName}`;
+                cell.title = `Feriado: ${holidayName}`;
             } else if (status === 'full') {
                 cell.style.background = 'rgba(239,68,68,0.22)';
                 cell.style.color = '#ef4444';

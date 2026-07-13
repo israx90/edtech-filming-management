@@ -1,0 +1,110 @@
+MANUAL DE INTEGRACIÓN - API DE CONSULTA DE DISPONIBILIDAD
+=========================================================
+
+Este documento explica cómo interpretar la respuesta JSON de la API de Consulta de Disponibilidad de la plataforma de filmación.
+
+---
+
+ESTRUCTURA GENERAL DEL JSON
+--------------------------
+
+El JSON devuelto contiene 5 secciones principales en su raíz:
+
+1. "year" (Número): El año consultado (ej. 2026).
+2. "month" (Número): El mes consultado (ej. 7 para Julio).
+3. "studio_hours" (Objeto): El horario oficial de funcionamiento del estudio.
+   - "start" (Texto): Hora de apertura (ej. "08:00").
+   - "end" (Texto): Hora de cierre (ej. "18:00").
+4. "work_days" (Array): Días laborales de la semana (1 = Lunes, 5 = Viernes. El fin de semana es Sábado y Domingo).
+5. "total_days" (Número): Cantidad de días que tiene el mes (ej. 31).
+6. "summary" (Objeto): Resumen estadístico mensual del estado de los días.
+   - "available": Días que están 100% disponibles.
+   - "partial": Días que tienen algunas horas ocupadas, pero tienen otras horas libres.
+   - "occupied": Días que están 100% ocupados (sin horas libres).
+   - "displacement": Días que tienen un "Desplazamiento de Equipo" (en este estado, el estudio se reporta como 100% libre).
+   - "closed": Días cerrados (fines de semana, feriados o días no laborables).
+7. "availability" (Array): La lista detallada día por día del mes.
+
+---
+
+CÓMO INTERPRETAR LA LISTA DE DETALLE ("availability")
+------------------------------------------------------
+
+Cada elemento dentro de la lista representa un día específico y contiene los siguientes campos según su estado:
+
+### Caso 1: Día con Disponibilidad Parcial ("status": "partial")
+Significa que el estudio está ocupado en algunos horarios, pero tiene bloques de tiempo disponibles.
+*Ejemplo:*
+```json
+{
+  "date": "2026-07-01",
+  "status": "partial",
+  "is_displacement": false,
+  "free_slots": [
+    {"start": "08:00", "end": "09:00"},
+    {"start": "12:00", "end": "14:00"},
+    {"start": "17:00", "end": "18:00"}
+  ]
+}
+```
+* **Interpretación:** En este día, el estudio solo puede ser reservado en los siguientes rangos horarios libres ("free_slots"):
+  - De 08:00 a 09:00 (1 hora disponible).
+  - De 12:00 a 14:00 (2 horas disponibles).
+  - De 17:00 a 18:00 (1 hora disponible).
+  Cualquier hora fuera de estos rangos está ocupada por otra filmación.
+
+### Caso 2: Día Completamente Disponible ("status": "available")
+Significa que el estudio no tiene ninguna reserva para este día.
+*Ejemplo:*
+```json
+{
+  "date": "2026-07-04",
+  "status": "available",
+  "is_displacement": false,
+  "free_slots": [
+    {"start": "08:00", "end": "18:00"}
+  ]
+}
+```
+* **Interpretación:** El día completo está libre. Se puede agendar cualquier filmación dentro del horario del estudio (de 08:00 a 18:00).
+
+### Caso 3: Día Cerrado o No Laborable ("status": "closed")
+Significa que el estudio no atiende ese día (fines de semana, feriados oficiales configurados por el administrador, o días especiales de mantenimiento).
+*Ejemplo:*
+```json
+{
+  "date": "2026-07-05",
+  "status": "closed",
+  "reason": "Día no laborable"
+}
+```
+* **Interpretación:** No se pueden agendar filmaciones. El campo `"reason"` explica el porqué (ej. "Día no laborable" para fines de semana, o el nombre del feriado correspondiente).
+
+### Caso 4: Día con Desplazamiento de Equipo ("status": "displacement")
+Un caso especial donde se registró que el equipo de filmación se desplaza fuera del estudio.
+*Ejemplo:*
+```json
+{
+  "date": "2026-07-15",
+  "status": "displacement",
+  "is_displacement": true,
+  "free_slots": [
+    {"start": "08:00", "end": "18:00"}
+  ]
+}
+```
+* **Interpretación:** Aunque haya un registro en el calendario para este día, el estado es "displacement" (desplazamiento), lo que significa que el estudio físico queda 100% disponible (de 08:00 a 18:00) para que otro sistema lo reserve si lo necesita.
+
+---
+
+RECOMENDACIONES PARA EL DESARROLLADOR DEL OTRO SISTEMA
+------------------------------------------------------
+
+1. **Mostrar Visualmente:**
+   - Dibuja un calendario mensual en tu aplicación.
+   - Pinta de **Verde** los días con `"status": "available"` o `"status": "displacement"`.
+   - Pinta de **Amarillo / Naranja** los días con `"status": "partial"`. Al hacer clic en ellos, muestra al usuario la lista de `"free_slots"` para que elija una de las horas permitidas.
+   - Pinta de **Gris / Rojo** los días con `"status": "closed"` o `"status": "occupied"` y no permitas hacer reservas sobre ellos.
+
+2. **Validar antes de Reservar:**
+   - Cuando el usuario elija una fecha y hora, comprueba que la hora seleccionada esté contenida dentro de los bloques descritos en `"free_slots"` para ese día en el JSON.
