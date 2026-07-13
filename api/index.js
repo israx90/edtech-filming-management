@@ -37,6 +37,23 @@ const asyncHandler = fn => (req, res, next) => {
     }
   } catch (e) { console.error('[Migration] is_displacement:', e.message); }
 
+  // Create api_keys table
+  try {
+    await execute(`
+      CREATE TABLE IF NOT EXISTS api_keys (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        name         VARCHAR(100) NOT NULL,
+        key_hash     VARCHAR(128) NOT NULL UNIQUE,
+        key_preview  VARCHAR(12)  NOT NULL,
+        created_by   INT,
+        is_active    TINYINT(1) DEFAULT 1,
+        last_used_at DATETIME DEFAULT NULL,
+        created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('[Migration] api_keys table ready.');
+  } catch (e) { console.error('[Migration] api_keys table:', e.message); }
+
   // Create holidays table
   try {
     await execute(`
@@ -953,6 +970,302 @@ app.delete('/api/holidays/:id', asyncHandler(async (req, res) => {
   await execute('DELETE FROM holidays WHERE id = ?', [id]);
   await logAction(user, `Eliminó feriado "${h.name}" (${h.date_key})`, 'holiday', id);
   res.json({ success: true });
+}));
+
+// ================================================
+// QUERY API — Autenticación por API Key
+// ================================================
+
+/**
+ * Middleware: valida API Key via header Authorization: Bearer <key>
+ * o query param ?api_key=<key>
+ * Actualiza last_used_at en cada uso.
+ */
+async function requireApiKey(req, res, next) {
+  let rawKey = null;
+  const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    rawKey = authHeader.slice(7).trim();
+  }
+  if (!rawKey && req.query.api_key) {
+    rawKey = String(req.query.api_key).trim();
+  }
+  if (!rawKey) {
+    return res.status(401).json({ error: 'API Key requerida. Usa Authorization: Bearer <key> o ?api_key=<key>' });
+  }
+  const crypto = require('crypto');
+  const hash = crypto.createHash('sha256').update(rawKey).digest('hex');
+  const keyRow = await require('../src/db').queryOne(
+    'SELECT * FROM api_keys WHERE key_hash = ? AND is_active = 1',
+    [hash]
+  );
+  if (!keyRow) {
+    return res.status(401).json({ error: 'API Key inválida o revocada' });
+  }
+  // Actualizar last_used_at de forma no bloqueante
+  require('../src/db').execute('UPDATE api_keys SET last_used_at = NOW() WHERE id = ?', [keyRow.id]).catch(() => {});
+  req.apiKeyRow = keyRow;
+  next();
+}
+
+// --- ADMIN: Gestión de API Keys ---
+
+app.get('/api/admin/api-keys', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAdmin(user, res)) return;
+  const rows = await queryAll(
+    'SELECT id, name, key_preview, is_active, created_by, last_used_at, created_at FROM api_keys ORDER BY created_at DESC'
+  );
+  res.json(rows);
+}));
+
+app.post('/api/admin/api-keys', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAdmin(user, res)) return;
+  const { name } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'El campo "name" es requerido' });
+
+  // Generar token seguro
+  const rawToken = crypto.randomBytes(40).toString('hex'); // 80 chars hex
+  const hash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const preview = rawToken.substring(0, 8) + '...';
+
+  const id = await execute(
+    'INSERT INTO api_keys (name, key_hash, key_preview, created_by, is_active) VALUES (?, ?, ?, ?, 1)',
+    [name.trim(), hash, preview, user.id]
+  );
+  await logAction(user, `Creó API Key "${name}" (id=${id})`, 'api_key', id);
+  // Retornar el token real UNA SOLA VEZ
+  res.status(201).json({
+    id,
+    name: name.trim(),
+    key_preview: preview,
+    is_active: 1,
+    created_at: new Date().toISOString(),
+    // ⚠️ Este es el único momento en que se muestra el token completo
+    api_key: rawToken,
+    warning: 'Guarda esta clave ahora. No se volverá a mostrar.'
+  });
+}));
+
+app.put('/api/admin/api-keys/:id/toggle', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAdmin(user, res)) return;
+  const id = parseInt(req.params.id);
+  const k = await queryOne('SELECT * FROM api_keys WHERE id = ?', [id]);
+  if (!k) return res.status(404).json({ error: 'API Key no encontrada' });
+  const newState = k.is_active ? 0 : 1;
+  await execute('UPDATE api_keys SET is_active = ? WHERE id = ?', [newState, id]);
+  await logAction(user, `${newState ? 'Activó' : 'Desactivó'} API Key "${k.name}" (id=${id})`, 'api_key', id);
+  res.json({ success: true, is_active: newState });
+}));
+
+app.delete('/api/admin/api-keys/:id', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAdmin(user, res)) return;
+  const id = parseInt(req.params.id);
+  const k = await queryOne('SELECT * FROM api_keys WHERE id = ?', [id]);
+  if (!k) return res.status(404).json({ error: 'API Key no encontrada' });
+  await execute('DELETE FROM api_keys WHERE id = ?', [id]);
+  await logAction(user, `Eliminó API Key "${k.name}" (id=${id})`, 'api_key', id);
+  res.json({ success: true });
+}));
+
+// --- QUERY API: Disponibilidad ---
+
+/**
+ * Helper: calcular disponibilidad de un día dado todos los datos necesarios.
+ * Regla especial de desplazamiento:
+ *   Si el día SOLO tiene sesiones de desplazamiento (is_displacement=1)
+ *   y ninguna sesión normal, el estudio está libre → status 'displacement'.
+ */
+function calcDayAvailability({ dateStr, dow, workDays, closedWeeks, sessions, displacementSessions, reservations, studioStart, studioEnd }) {
+  const pad = n => String(n).padStart(2, '0');
+
+  // Día no laborable
+  if (!workDays.includes(dow)) return { date: dateStr, status: 'closed', reason: 'Día no laborable' };
+
+  // Semana cerrada
+  const d = new Date(dateStr);
+  const mondayOffset = dow === 1 ? 0 : 1 - dow;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + mondayOffset);
+  const mondayStr = monday.toISOString().split('T')[0];
+  if (closedWeeks.some(cw => cw.week_start === mondayStr)) {
+    return { date: dateStr, status: 'closed', reason: 'Semana cerrada' };
+  }
+
+  const dayNormalSessions = sessions.filter(s => s.session_date === dateStr);
+  const dayDisplacements = displacementSessions.filter(s => s.session_date === dateStr);
+  const dayReservations = reservations.filter(r => r.date === dateStr);
+
+  // Si SOLO hay desplazamientos (sin sesiones normales y sin reservas), el estudio está disponible
+  if (dayDisplacements.length > 0 && dayNormalSessions.length === 0 && dayReservations.length === 0) {
+    return {
+      date: dateStr,
+      status: 'displacement',
+      is_displacement: true,
+      free_slots: [{ start: studioStart, end: studioEnd }],
+      notes: 'Equipo en desplazamiento — estudio disponible'
+    };
+  }
+
+  // Calcular slots ocupados
+  const busyIntervals = [
+    ...dayNormalSessions.map(s => ({ start: s.start_time?.substring(0, 5), end: s.end_time?.substring(0, 5) })),
+    ...dayReservations.map(r => ({ start: r.start_time?.substring(0, 5), end: r.end_time?.substring(0, 5) })),
+  ];
+
+  const startH = parseInt(studioStart.split(':')[0]);
+  const endH   = parseInt(studioEnd.split(':')[0]);
+  const allSlots = [];
+  for (let h = startH; h < endH; h++) {
+    const ss = `${pad(h)}:00`;
+    const se = `${pad(h + 1)}:00`;
+    if (!busyIntervals.some(b => !(se <= b.start || ss >= b.end))) allSlots.push({ start: ss, end: se });
+  }
+
+  if (allSlots.length === 0) return { date: dateStr, status: 'occupied', is_displacement: false };
+  if (allSlots.length === endH - startH) {
+    return { date: dateStr, status: 'available', is_displacement: false, free_slots: [{ start: studioStart, end: studioEnd }] };
+  }
+
+  // Fusionar slots adyacentes
+  const merged = [];
+  for (const slot of allSlots) {
+    if (merged.length && merged[merged.length - 1].end === slot.start) merged[merged.length - 1].end = slot.end;
+    else merged.push({ ...slot });
+  }
+  return { date: dateStr, status: 'partial', is_displacement: false, free_slots: merged };
+}
+
+/**
+ * Helper: cargar datos de estudio y sesiones para un rango de fechas.
+ */
+async function loadStudioData(startDate, endDate) {
+  const stRow = await queryOne("SELECT value FROM settings WHERE `key` = 'studio_start_time'");
+  const etRow = await queryOne("SELECT value FROM settings WHERE `key` = 'studio_end_time'");
+  const daysRow = await queryOne("SELECT value FROM settings WHERE `key` = 'studio_days'");
+  const studioStart = stRow?.value || '08:00';
+  const studioEnd   = etRow?.value || '18:00';
+  const workDays    = (daysRow?.value || '1,2,3,4,5').split(',').map(Number);
+
+  const sessions = await queryAll(
+    "SELECT session_date, start_time, end_time FROM recording_sessions WHERE session_date >= ? AND session_date <= ? AND (status IS NULL OR status != 'cancelled') AND (is_displacement = 0 OR is_displacement IS NULL)",
+    [startDate, endDate]
+  );
+  const displacementSessions = await queryAll(
+    "SELECT session_date, start_time, end_time FROM recording_sessions WHERE session_date >= ? AND session_date <= ? AND (status IS NULL OR status != 'cancelled') AND is_displacement = 1",
+    [startDate, endDate]
+  );
+  const reservations = await queryAll(
+    'SELECT date, start_time, end_time FROM reservations WHERE is_displacement = false AND date >= ? AND date <= ?',
+    [startDate, endDate]
+  );
+  const closedWeeks = await queryAll('SELECT week_start FROM closed_weeks');
+
+  return { studioStart, studioEnd, workDays, sessions, displacementSessions, reservations, closedWeeks };
+}
+
+// GET /api/query/availability?year=YYYY&month=MM
+app.get('/api/query/availability', asyncHandler(async (req, res) => {
+  await new Promise((resolve, reject) => requireApiKey(req, res, (err) => err ? reject(err) : resolve()));
+  if (res.headersSent) return;
+
+  const year  = parseInt(req.query.year  || new Date().getFullYear());
+  const month = parseInt(req.query.month || (new Date().getMonth() + 1));
+  const pad   = n => String(n).padStart(2, '0');
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const startDate = `${year}-${pad(month)}-01`;
+  const endDate   = `${year}-${pad(month)}-${pad(daysInMonth)}`;
+
+  const data = await loadStudioData(startDate, endDate);
+  const availability = [];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${year}-${pad(month)}-${pad(day)}`;
+    const d = new Date(dateStr);
+    const dow = d.getDay() === 0 ? 7 : d.getDay();
+    availability.push(calcDayAvailability({ dateStr, dow, ...data }));
+  }
+
+  res.json({
+    year,
+    month,
+    studio_hours: { start: data.studioStart, end: data.studioEnd },
+    work_days: data.workDays,
+    total_days: daysInMonth,
+    summary: {
+      available:    availability.filter(d => d.status === 'available').length,
+      partial:      availability.filter(d => d.status === 'partial').length,
+      occupied:     availability.filter(d => d.status === 'occupied').length,
+      displacement: availability.filter(d => d.status === 'displacement').length,
+      closed:       availability.filter(d => d.status === 'closed').length,
+    },
+    availability
+  });
+}));
+
+// GET /api/query/availability/range?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
+app.get('/api/query/availability/range', asyncHandler(async (req, res) => {
+  await new Promise((resolve, reject) => requireApiKey(req, res, (err) => err ? reject(err) : resolve()));
+  if (res.headersSent) return;
+
+  const { start_date, end_date } = req.query;
+  if (!start_date || !end_date) {
+    return res.status(400).json({ error: 'Se requieren start_date y end_date en formato YYYY-MM-DD' });
+  }
+  const startDate = start_date;
+  const endDate   = end_date;
+
+  const data = await loadStudioData(startDate, endDate);
+  const availability = [];
+  const current = new Date(startDate);
+  const last    = new Date(endDate);
+
+  while (current <= last) {
+    const dateStr = current.toISOString().split('T')[0];
+    const dow = current.getDay() === 0 ? 7 : current.getDay();
+    availability.push(calcDayAvailability({ dateStr, dow, ...data }));
+    current.setDate(current.getDate() + 1);
+  }
+
+  res.json({
+    start_date: startDate,
+    end_date: endDate,
+    studio_hours: { start: data.studioStart, end: data.studioEnd },
+    work_days: data.workDays,
+    summary: {
+      available:    availability.filter(d => d.status === 'available').length,
+      partial:      availability.filter(d => d.status === 'partial').length,
+      occupied:     availability.filter(d => d.status === 'occupied').length,
+      displacement: availability.filter(d => d.status === 'displacement').length,
+      closed:       availability.filter(d => d.status === 'closed').length,
+    },
+    availability
+  });
+}));
+
+// GET /api/query/availability/:date  (YYYY-MM-DD)
+app.get('/api/query/availability/:date', asyncHandler(async (req, res) => {
+  await new Promise((resolve, reject) => requireApiKey(req, res, (err) => err ? reject(err) : resolve()));
+  if (res.headersSent) return;
+
+  const dateStr = req.params.date;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return res.status(400).json({ error: 'Formato de fecha inválido. Usa YYYY-MM-DD' });
+  }
+
+  const data = await loadStudioData(dateStr, dateStr);
+  const d    = new Date(dateStr);
+  const dow  = d.getDay() === 0 ? 7 : d.getDay();
+  const day  = calcDayAvailability({ dateStr, dow, ...data });
+
+  res.json({
+    studio_hours: { start: data.studioStart, end: data.studioEnd },
+    work_days: data.workDays,
+    day
+  });
 }));
 
 // Error handler

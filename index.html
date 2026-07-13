@@ -407,6 +407,10 @@
                     Feriados
                 </button>
                 <button class="admin-tab-btn" id="admin-tab-log">Log de Actividad</button>
+                <button class="admin-tab-btn" id="admin-tab-apikeys">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                    API Keys
+                </button>
             </div>
 
             <!-- Tab: Users -->
@@ -550,6 +554,90 @@ PSI-220 Psicología General,Psicología"></textarea>
                 <div class="admin-section">
                     <h4 class="admin-section-title">Actividad Reciente</h4>
                     <div id="activity-log-list"></div>
+                </div>
+            </div>
+
+            <!-- Tab: API Keys -->
+            <div class="admin-tab-panel" id="admin-panel-apikeys" style="display:none;">
+                <!-- Crear nueva key -->
+                <div class="admin-section">
+                    <h4 class="admin-section-title">Crear Nueva API Key</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px; line-height:1.6;">
+                        Las API Keys permiten a sistemas externos consultar la disponibilidad del estudio sin necesidad de login.
+                        El token solo se muestra <strong>una vez</strong> al crearse — guárdalo de inmediato.
+                    </p>
+                    <div class="form-grid" style="grid-template-columns: 1fr auto; gap:12px; align-items:end;">
+                        <div class="form-row">
+                            <label for="apikey-name">Nombre descriptivo del sistema</label>
+                            <input type="text" id="apikey-name" class="input" placeholder="Ej: Sistema LMS, Portal Web Externo">
+                        </div>
+                        <button class="btn btn-primary" id="btn-create-apikey" style="height:38px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Generar Key
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Caja de nuevo token (aparece tras crear) -->
+                <div id="apikey-reveal-box" style="display:none; margin-top:16px;">
+                    <div style="padding:16px 20px; background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.3); border-radius:8px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                            <div style="font-size:13px; font-weight:700; color:var(--green);">🔑 API Key generada — cópiala ahora</div>
+                            <button class="btn-sm btn-ghost" onclick="AdminPanel.hideApiKeyReveal()" style="font-size:11px;">✕ Cerrar</button>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <code id="apikey-reveal-token" style="flex:1; font-size:12px; font-family:monospace; background:var(--bg-tertiary); padding:10px 14px; border-radius:6px; border:1px solid var(--border-light); word-break:break-all; color:var(--accent);"></code>
+                            <button class="btn btn-outline" id="btn-copy-apikey" onclick="AdminPanel.copyApiKey()" style="white-space:nowrap; height:38px;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                Copiar
+                            </button>
+                        </div>
+                        <p style="font-size:11px; color:var(--text-muted); margin-top:8px; margin-bottom:0;">⚠️ Este token no se volverá a mostrar. Si lo pierdes, deberás generar una nueva key.</p>
+                    </div>
+                </div>
+
+                <!-- Tabla de keys existentes -->
+                <div class="admin-section" style="margin-top:24px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                        <h4 class="admin-section-title" style="margin:0;">API Keys Activas (<span id="apikeys-count">0</span>)</h4>
+                        <button class="btn-sm btn-ghost" onclick="AdminPanel.loadApiKeys()">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                            Actualizar
+                        </button>
+                    </div>
+                    <!-- Header -->
+                    <div style="display:grid; grid-template-columns:1fr 100px 140px 130px 80px; gap:0; padding:6px 12px; background:var(--bg-tertiary); border-radius:6px 6px 0 0; border:1px solid var(--border-light); border-bottom:none;">
+                        <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Nombre / Preview</span>
+                        <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Estado</span>
+                        <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Último uso</span>
+                        <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Creada</span>
+                        <span></span>
+                    </div>
+                    <div id="apikeys-list" style="border:1px solid var(--border-light); border-radius:0 0 6px 6px; min-height:60px;"></div>
+                </div>
+
+                <!-- Docs rápidas -->
+                <div class="admin-section" style="margin-top:24px;">
+                    <h4 class="admin-section-title">Cómo usar la API</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">Endpoint base: <code id="apikey-base-url" style="color:var(--accent);"></code></p>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+                        <div style="padding:14px; background:var(--bg-tertiary); border:1px solid var(--border-light); border-radius:8px;">
+                            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Disponibilidad Mensual</div>
+                            <code style="font-size:11px; color:var(--accent); word-break:break-all;">/api/query/availability?year=2026&amp;month=7</code>
+                        </div>
+                        <div style="padding:14px; background:var(--bg-tertiary); border:1px solid var(--border-light); border-radius:8px;">
+                            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Disponibilidad por Rango</div>
+                            <code style="font-size:11px; color:var(--accent); word-break:break-all;">/api/query/availability/range?start_date=2026-07-01&amp;end_date=2026-07-31</code>
+                        </div>
+                        <div style="padding:14px; background:var(--bg-tertiary); border:1px solid var(--border-light); border-radius:8px;">
+                            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Un Día Específico</div>
+                            <code style="font-size:11px; color:var(--accent);">/api/query/availability/2026-07-15</code>
+                        </div>
+                    </div>
+                    <div style="margin-top:12px; padding:12px 16px; background:var(--bg-tertiary); border:1px solid var(--border-light); border-radius:8px;">
+                        <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">Autenticación (header HTTP)</div>
+                        <code style="font-size:12px; color:var(--text-secondary);">Authorization: Bearer &lt;tu-api-key&gt;</code>
+                    </div>
                 </div>
             </div>
         </section>

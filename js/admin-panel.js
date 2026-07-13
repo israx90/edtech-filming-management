@@ -8,6 +8,8 @@ const AdminPanel = {
     holidays: [],
     holidaysFilter: 'all',
     log: [],
+    apiKeys: [],
+    lastApiKey: null,
     activeTab: 'users',
 
     init() {
@@ -15,6 +17,11 @@ const AdminPanel = {
         document.getElementById('admin-tab-subjects')?.addEventListener('click', () => this.switchTab('subjects'));
         document.getElementById('admin-tab-holidays')?.addEventListener('click', () => this.switchTab('holidays'));
         document.getElementById('admin-tab-log')?.addEventListener('click', () => this.switchTab('log'));
+        document.getElementById('admin-tab-apikeys')?.addEventListener('click', () => this.switchTab('apikeys'));
+
+        // Set base URL in docs section
+        const baseUrlEl = document.getElementById('apikey-base-url');
+        if (baseUrlEl) baseUrlEl.textContent = window.location.origin;
 
         // User management
         document.getElementById('btn-save-new-user')?.addEventListener('click', () => this.createUser());
@@ -77,6 +84,7 @@ const AdminPanel = {
         if (tab === 'subjects') await this.loadGlobalSubjects();
         if (tab === 'holidays') await this.loadHolidays();
         if (tab === 'log') await this.loadLog();
+        if (tab === 'apikeys') await this.loadApiKeys();
     },
 
     // ---- USERS ----
@@ -410,6 +418,145 @@ _Por favor, guarda estos datos de forma segura._`;
         }
         dateInput.focus();
         showToast(type === 'fixed' ? 'Ingresa la fecha como MM-DD' : 'Ingresa la fecha como YYYY-MM-DD', 'info');
+    },
+
+    // ---- API KEYS ----
+    async loadApiKeys() {
+        const list = document.getElementById('apikeys-list');
+        if (list) list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Cargando...</div>';
+        const data = await API.get('/admin/api-keys');
+        this.apiKeys = Array.isArray(data) ? data : [];
+        this.renderApiKeys();
+
+        // Bind create button once loaded
+        const btn = document.getElementById('btn-create-apikey');
+        if (btn && !btn.dataset.bound) {
+            btn.dataset.bound = '1';
+            btn.addEventListener('click', () => this.createApiKey());
+            document.getElementById('apikey-name')?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') this.createApiKey();
+            });
+        }
+    },
+
+    renderApiKeys() {
+        const list = document.getElementById('apikeys-list');
+        const countEl = document.getElementById('apikeys-count');
+        if (!list) return;
+
+        if (countEl) countEl.textContent = this.apiKeys.length;
+
+        if (this.apiKeys.length === 0) {
+            list.innerHTML = `<div class="empty-state" style="padding:28px 12px;">
+                <p>No hay API Keys registradas</p>
+                <span>Crea una usando el formulario de arriba</span>
+            </div>`;
+            return;
+        }
+
+        const fmtDate = (str) => {
+            if (!str) return '<span style="color:var(--text-muted);font-size:11px;">Nunca</span>';
+            const d = new Date(str);
+            return d.toLocaleDateString('es-BO', { day: '2-digit', month: 'short', year: 'numeric' })
+                 + ' ' + d.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
+        };
+
+        list.innerHTML = this.apiKeys.map((k, i) => {
+            const bg = i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-elevated)';
+            const activeBadge = k.is_active
+                ? `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(52,211,153,0.15);color:#34d399;">Activa</span>`
+                : `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(239,68,68,0.15);color:#f87171;">Inactiva</span>`;
+            return `
+                <div style="display:grid;grid-template-columns:1fr 100px 140px 130px 80px;gap:0;padding:10px 12px;background:${bg};border-bottom:1px solid var(--border-light);align-items:center;"
+                    onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='${bg}'">
+                    <div>
+                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${k.name}</div>
+                        <div style="font-family:monospace;font-size:11px;color:var(--text-muted);margin-top:2px;">${k.key_preview}</div>
+                    </div>
+                    <div>${activeBadge}</div>
+                    <div style="font-size:11px;color:var(--text-secondary);">${fmtDate(k.last_used_at)}</div>
+                    <div style="font-size:11px;color:var(--text-secondary);">${fmtDate(k.created_at)}</div>
+                    <div style="display:flex;gap:6px;justify-content:flex-end;">
+                        <button class="btn-icon" title="${k.is_active ? 'Desactivar' : 'Activar'}" onclick="AdminPanel.toggleApiKey(${k.id})" style="color:${k.is_active ? 'var(--accent)' : 'var(--text-muted)'}">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/>${k.is_active ? '<polyline points="8 12 11 15 16 9"/>' : '<line x1="8" y1="8" x2="16" y2="16"/><line x1="16" y1="8" x2="8" y2="16"/>'}</svg>
+                        </button>
+                        <button class="btn-icon btn-danger-icon" title="Eliminar key" onclick="AdminPanel.deleteApiKey(${k.id}, '${k.name.replace(/'/g, "&apos;")}')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    async createApiKey() {
+        const name = document.getElementById('apikey-name')?.value.trim();
+        if (!name) return showToast('Ingresa un nombre para la API Key', 'error');
+
+        const btn = document.getElementById('btn-create-apikey');
+        if (btn) { btn.disabled = true; btn.textContent = 'Generando...'; }
+
+        const result = await API.post('/admin/api-keys', { name });
+
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Generar Key`;
+        }
+
+        if (result.error) return showToast(result.error, 'error');
+
+        // Show the reveal box
+        this.lastApiKey = result.api_key;
+        const tokenEl = document.getElementById('apikey-reveal-token');
+        const revealBox = document.getElementById('apikey-reveal-box');
+        if (tokenEl) tokenEl.textContent = result.api_key;
+        if (revealBox) revealBox.style.display = 'block';
+
+        // Clear input
+        document.getElementById('apikey-name').value = '';
+        showToast(`API Key "${name}" creada. ¡Cópiala ahora!`, 'success');
+        await this.loadApiKeys();
+    },
+
+    async toggleApiKey(id) {
+        const result = await API.put(`/admin/api-keys/${id}/toggle`, {});
+        if (result.error) return showToast(result.error, 'error');
+        showToast(result.is_active ? 'API Key activada' : 'API Key desactivada', 'info');
+        await this.loadApiKeys();
+    },
+
+    async deleteApiKey(id, name) {
+        Calendar.showConfirm({
+            title: 'Eliminar API Key',
+            message: `¿Eliminar la key "${name}"? Los sistemas que la usen dejarán de funcionar inmediatamente.`
+        }, async () => {
+            const result = await API.del(`/admin/api-keys/${id}`);
+            if (result.error) return showToast(result.error, 'error');
+            showToast('API Key eliminada', 'success');
+            await this.loadApiKeys();
+        });
+    },
+
+    async copyApiKey() {
+        if (!this.lastApiKey) return;
+        try {
+            await navigator.clipboard.writeText(this.lastApiKey);
+            const btn = document.getElementById('btn-copy-apikey');
+            if (btn) {
+                const orig = btn.innerHTML;
+                btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> ¡Copiada!`;
+                setTimeout(() => { btn.innerHTML = orig; }, 2000);
+            }
+            showToast('API Key copiada al portapapeles', 'success');
+        } catch (e) {
+            showToast('No se pudo copiar. Selecciona el texto manualmente.', 'error');
+        }
+    },
+
+    hideApiKeyReveal() {
+        const box = document.getElementById('apikey-reveal-box');
+        if (box) box.style.display = 'none';
+        this.lastApiKey = null;
     }
 };
 
