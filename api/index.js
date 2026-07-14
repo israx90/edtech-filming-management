@@ -526,11 +526,35 @@ app.post('/api/sessions', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
   if (!requireAuth(user, res)) return;
   const { assignment_id, session_date, start_time, end_time, hito_reached, notes, staff_1_id, staff_2_id, is_displacement } = req.body;
-  const conflict = await queryOne(
-    "SELECT rs.id FROM recording_sessions rs WHERE rs.session_date = ? AND rs.status != 'cancelled' AND ((? >= rs.start_time AND ? < rs.end_time) OR (? > rs.start_time AND ? <= rs.end_time) OR (? <= rs.start_time AND ? >= rs.end_time))",
+  // Check conflicts with other sessions
+  let conflictMsg = null;
+  const sConflict = await queryOne(
+    `SELECT rs.id, fa.teacher_name, sub.code as subject_code, rs.start_time, rs.end_time 
+     FROM recording_sessions rs 
+     JOIN filming_assignments fa ON rs.assignment_id = fa.id 
+     JOIN subjects sub ON fa.subject_id = sub.id 
+     WHERE rs.session_date = ? AND rs.status != 'cancelled' 
+     AND ((? >= rs.start_time AND ? < rs.end_time) OR (? > rs.start_time AND ? <= rs.end_time) OR (? <= rs.start_time AND ? >= rs.end_time))`,
     [session_date, start_time, start_time, end_time, end_time, start_time, end_time]
   );
-  if (conflict) return res.status(409).json({ error: 'Conflicto de horario' });
+  if (sConflict) {
+    conflictMsg = `Conflicto con la sesión de ${sConflict.teacher_name} (${sConflict.subject_code}) de ${sConflict.start_time?.substring(0,5)} a ${sConflict.end_time?.substring(0,5)}`;
+  } else {
+    // Check conflicts with reservations (that are not displacements)
+    const rConflict = await queryOne(
+      `SELECT r.id, r.reason, u.name as user_name, r.start_time, r.end_time 
+       FROM reservations r 
+       JOIN users u ON r.user_id = u.id 
+       WHERE r.date = ? AND r.is_displacement = 0
+       AND ((? >= r.start_time AND ? < r.end_time) OR (? > r.start_time AND ? <= r.end_time) OR (? <= r.start_time AND ? >= r.end_time))`,
+      [session_date, start_time, start_time, end_time, end_time, start_time, end_time]
+    );
+    if (rConflict) {
+      conflictMsg = `Conflicto con la reserva de ${rConflict.user_name} (${rConflict.reason || 'Sin motivo'}) de ${rConflict.start_time?.substring(0,5)} a ${rConflict.end_time?.substring(0,5)}`;
+    }
+  }
+
+  if (conflictMsg) return res.status(409).json({ error: conflictMsg });
   const sid = await execute('INSERT INTO recording_sessions (assignment_id, session_date, start_time, end_time, hito_reached, notes, staff_1_id, staff_2_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     [assignment_id, session_date, start_time, end_time, hito_reached || null, notes || null, staff_1_id || null, staff_2_id || null]);
   // Set is_displacement in a separate safe call (column may not exist on first deploy)
@@ -552,6 +576,42 @@ app.put('/api/sessions/:id', asyncHandler(async (req, res) => {
   if (!requireAuth(user, res)) return;
   const id = parseInt(req.params.id);
   const body = req.body;
+  if (body.session_date !== undefined || body.start_time !== undefined || body.end_time !== undefined) {
+    const currentSession = await queryOne('SELECT * FROM recording_sessions WHERE id = ?', [id]);
+    if (currentSession) {
+      const session_date = body.session_date !== undefined ? body.session_date : currentSession.session_date;
+      const start_time = body.start_time !== undefined ? body.start_time : currentSession.start_time;
+      const end_time = body.end_time !== undefined ? body.end_time : currentSession.end_time;
+      
+      let conflictMsg = null;
+      const sConflict = await queryOne(
+        `SELECT rs.id, fa.teacher_name, sub.code as subject_code, rs.start_time, rs.end_time 
+         FROM recording_sessions rs 
+         JOIN filming_assignments fa ON rs.assignment_id = fa.id 
+         JOIN subjects sub ON fa.subject_id = sub.id 
+         WHERE rs.session_date = ? AND rs.status != 'cancelled' AND rs.id != ?
+         AND ((? >= rs.start_time AND ? < rs.end_time) OR (? > rs.start_time AND ? <= rs.end_time) OR (? <= rs.start_time AND ? >= rs.end_time))`,
+        [session_date, id, start_time, start_time, end_time, end_time, start_time, end_time]
+      );
+      if (sConflict) {
+        conflictMsg = `Conflicto con la sesión de ${sConflict.teacher_name} (${sConflict.subject_code}) de ${sConflict.start_time?.substring(0,5)} a ${sConflict.end_time?.substring(0,5)}`;
+      } else {
+        const rConflict = await queryOne(
+          `SELECT r.id, r.reason, u.name as user_name, r.start_time, r.end_time 
+           FROM reservations r 
+           JOIN users u ON r.user_id = u.id 
+           WHERE r.date = ? AND r.is_displacement = 0
+           AND ((? >= r.start_time AND ? < r.end_time) OR (? > r.start_time AND ? <= r.end_time) OR (? <= r.start_time AND ? >= r.end_time))`,
+          [session_date, start_time, start_time, end_time, end_time, start_time, end_time]
+        );
+        if (rConflict) {
+          conflictMsg = `Conflicto con la reserva de ${rConflict.user_name} (${rConflict.reason || 'Sin motivo'}) de ${rConflict.start_time?.substring(0,5)} a ${rConflict.end_time?.substring(0,5)}`;
+        }
+      }
+      if (conflictMsg) return res.status(409).json({ error: conflictMsg });
+    }
+  }
+
   if (body.session_date !== undefined) await execute('UPDATE recording_sessions SET session_date = ? WHERE id = ?', [body.session_date, id]);
   if (body.start_time !== undefined) await execute('UPDATE recording_sessions SET start_time = ? WHERE id = ?', [body.start_time, id]);
   if (body.end_time !== undefined) await execute('UPDATE recording_sessions SET end_time = ? WHERE id = ?', [body.end_time, id]);
