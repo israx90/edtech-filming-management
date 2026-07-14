@@ -507,8 +507,14 @@ app.get('/api/sessions/availability', asyncHandler(async (req, res) => {
     let morningBusy = false, afternoonBusy = false;
     [...nonDispSessions, ...reservations.map(r => ({ session_date: r.date, start_time: r.start_time, end_time: r.end_time }))].forEach(s => {
       if (s.session_date !== dateStr) return;
-      if (s.start_time?.substring(0,5) < '13:00') morningBusy = true;
-      if (s.end_time?.substring(0,5) > '13:00') afternoonBusy = true;
+      const t1 = s.start_time?.substring(0,5);
+      const t2 = s.end_time?.substring(0,5);
+      if (t1 < '13:00') {
+        morningBusy = true;
+        if (t2 >= '14:00') afternoonBusy = true;
+      } else {
+        afternoonBusy = true;
+      }
     });
     if (morningBusy && afternoonBusy) result[dateStr] = 'full';
     else if (morningBusy) result[dateStr] = 'morning_busy';
