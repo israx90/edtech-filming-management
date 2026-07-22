@@ -1334,7 +1334,7 @@ app.get('/api/query/availability/:date', asyncHandler(async (req, res) => {
   });
 }));
 
-// GET /api/admin/staff-report — participation count per user
+// GET /api/admin/staff-report — participation count per user (recording_sessions + reservations)
 app.get('/api/admin/staff-report', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
   if (!requireAdmin(user, res)) return;
@@ -1342,7 +1342,23 @@ app.get('/api/admin/staff-report', asyncHandler(async (req, res) => {
   const year  = parseInt(req.query.year)  || new Date().getFullYear();
   const month = parseInt(req.query.month) || (new Date().getMonth() + 1);
 
-  // Gather sessions for the requested month with staff slots, dates, times and subject info
+  // Build user lookup by id and by name (normalized)
+  const usersDb = await queryAll('SELECT id, name FROM users ORDER BY name ASC');
+  const nameMap = {};      // id -> name
+  const nameToId = {};     // normalized-name -> id
+  for (const u of usersDb) {
+    nameMap[u.id] = u.name;
+    nameToId[u.name.toLowerCase().trim()] = u.id;
+  }
+
+  // Helper to get/init a user entry
+  const ensureUser = (id, name) => {
+    if (!map[id]) map[id] = { id, name: nameMap[id] || name, total: 0, dates: new Set(), entries: [] };
+  };
+
+  const map = {}; // key -> { id, name, total, dates, entries }
+
+  // ── SOURCE 1: recording_sessions (staff_1_id…staff_4_id) ──
   const sessions = await queryAll(`
     SELECT rs.session_date, rs.start_time, rs.end_time,
            rs.staff_1_id, rs.staff_2_id, rs.staff_3_id, rs.staff_4_id,
@@ -1358,14 +1374,6 @@ app.get('/api/admin/staff-report', asyncHandler(async (req, res) => {
     ORDER BY rs.session_date ASC
   `, [year, month]);
 
-  // Build user name lookup
-  const usersDb = await queryAll('SELECT id, name FROM users ORDER BY name ASC');
-  const nameMap = {};
-  for (const u of usersDb) nameMap[u.id] = u.name;
-
-  // Aggregate by user id
-  const map = {}; // uid -> { name, sessions: [], dates: Set }
-
   for (const s of sessions) {
     const dateStr = s.session_date
       ? (typeof s.session_date === 'string' ? s.session_date.slice(0, 10)
@@ -1376,7 +1384,6 @@ app.get('/api/admin/staff-report', asyncHandler(async (req, res) => {
     const endH   = parseInt((s.end_time   || '10:00').substring(0, 2), 10);
     const isFullDay = startH < 13 && endH > 13;
 
-    // staff_1 + staff_2 = morning slots, staff_3 + staff_4 = afternoon slots
     const slots = [
       { key: 'staff_1_id', turno: isFullDay ? 'mañana' : 'sesión' },
       { key: 'staff_2_id', turno: isFullDay ? 'mañana' : 'sesión' },
@@ -1387,23 +1394,61 @@ app.get('/api/admin/staff-report', asyncHandler(async (req, res) => {
     for (const { key, turno } of slots) {
       const uid = s[key];
       if (!uid) continue;
-      if (!map[uid]) {
-        map[uid] = {
-          id: uid,
-          name: nameMap[uid] || `Usuario #${uid}`,
-          total: 0,
-          dates: new Set(),
-          entries: []
-        };
-      }
+      ensureUser(uid, `Usuario #${uid}`);
       map[uid].total += 1;
       if (dateStr) map[uid].dates.add(dateStr);
       map[uid].entries.push({
-        date: dateStr,
-        turno,
-        subject: s.subject_code ? `${s.subject_code} - ${s.subject_name}` : s.subject_name,
+        date: dateStr, turno, source: 'sesión',
+        subject: s.subject_code ? `${s.subject_code} - ${s.subject_name}` : (s.subject_name || null),
         teacher: s.teacher_name || null
       });
+    }
+  }
+
+  // ── SOURCE 2: reservations.attendees (Full Day attendance list) ──
+  const reservations = await queryAll(`
+    SELECT date, start_time, end_time, reason, attendees
+    FROM reservations
+    WHERE attendees IS NOT NULL AND attendees != '' AND attendees != '[]'
+      AND EXTRACT(YEAR FROM date) = ?
+      AND EXTRACT(MONTH FROM date) = ?
+    ORDER BY date ASC
+  `, [year, month]);
+
+  for (const r of reservations) {
+    const dateStr = r.date
+      ? (typeof r.date === 'string' ? r.date.slice(0, 10) : r.date.toISOString().slice(0, 10))
+      : null;
+
+    const startH = parseInt((r.start_time || '08:00').substring(0, 2), 10);
+    const endH   = parseInt((r.end_time   || '17:00').substring(0, 2), 10);
+    const isFullDay = startH < 13 && endH > 13;
+
+    let names = [];
+    try { names = typeof r.attendees === 'string' ? JSON.parse(r.attendees) : r.attendees; } catch(e) {}
+    if (!Array.isArray(names)) names = [];
+
+    for (const rawName of names) {
+      if (!rawName || !rawName.trim()) continue;
+      const normalized = rawName.toLowerCase().trim();
+      // Try to match to a known user by name
+      const uid = nameToId[normalized] || `name:${rawName.trim()}`;
+      const displayName = nameMap[uid] || rawName.trim();
+
+      ensureUser(uid, displayName);
+
+      if (isFullDay) {
+        // Full day = counts as 2 entries (mañana + tarde)
+        map[uid].total += 2;
+        if (dateStr) map[uid].dates.add(dateStr);
+        map[uid].entries.push({ date: dateStr, turno: 'mañana', source: 'full-day', subject: r.reason || 'Día completo', teacher: null });
+        map[uid].entries.push({ date: dateStr, turno: 'tarde',  source: 'full-day', subject: r.reason || 'Día completo', teacher: null });
+      } else {
+        const turno = startH < 13 ? 'mañana' : 'tarde';
+        map[uid].total += 1;
+        if (dateStr) map[uid].dates.add(dateStr);
+        map[uid].entries.push({ date: dateStr, turno, source: 'reserva', subject: r.reason || 'Reserva', teacher: null });
+      }
     }
   }
 

@@ -654,7 +654,8 @@ _Por favor, guarda estos datos de forma segura._`;
             const dt = new Date(d + 'T12:00:00');
             return dt.toLocaleDateString('es-BO', { weekday:'short', day:'2-digit', month:'short' });
         };
-        const turnoColor = { 'mañana': 'var(--cyan, #22d3ee)', 'tarde': 'var(--amber, #fbbf24)', 'sesión': 'var(--accent)' };
+        const turnoColor  = { 'mañana': 'var(--cyan, #22d3ee)', 'tarde': 'var(--amber, #fbbf24)', 'sesión': 'var(--accent)' };
+        const sourceLabel = { 'sesión': '🎬', 'full-day': '📅', 'reserva': '🗓' };
 
         list.innerHTML = data.map((u, i) => {
             const pct  = Math.round((u.total / maxSessions) * 100);
@@ -671,10 +672,12 @@ _Por favor, guarda estos datos de forma segura._`;
             const datesHtml = Object.entries(byDate).map(([date, entries]) => {
                 const entriesHtml = entries.map(e => {
                     const tColor = turnoColor[e.turno] || 'var(--text-muted)';
+                    const srcIcon = sourceLabel[e.source] || '';
                     return `<div style="display:flex; align-items:center; gap:6px; margin-left:12px;">
                         <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:${tColor}; flex-shrink:0;"></span>
                         <span style="font-size:10px; font-weight:600; color:${tColor}; text-transform:uppercase; min-width:52px;">${e.turno}</span>
-                        <span style="font-size:11px; color:var(--text-primary);">${e.subject}</span>
+                        <span style="font-size:12px;" title="${e.source || ''}">${srcIcon}</span>
+                        <span style="font-size:11px; color:var(--text-primary);">${e.subject || '—'}</span>
                         ${e.teacher ? `<span style="font-size:10px; color:var(--text-muted);">· ${e.teacher}</span>` : ''}
                     </div>`;
                 }).join('');
