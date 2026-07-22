@@ -1334,25 +1334,32 @@ app.get('/api/query/availability/:date', asyncHandler(async (req, res) => {
   });
 }));
 
-// GET /admin/staff-report — participation count per user
-app.get('/api/admin/staff-report', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
-  // Gather all sessions with their 4 staff slots and dates (exclude cancelled)
+// GET /api/admin/staff-report — participation count per user
+app.get('/api/admin/staff-report', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAdmin(user, res)) return;
+
+  // Gather all sessions with staff slots, dates, times and subject info
   const sessions = await queryAll(`
-    SELECT rs.session_date,
-           rs.staff_1_id, rs.staff_2_id, rs.staff_3_id, rs.staff_4_id
+    SELECT rs.session_date, rs.start_time, rs.end_time,
+           rs.staff_1_id, rs.staff_2_id, rs.staff_3_id, rs.staff_4_id,
+           s.code as subject_code, s.name as subject_name,
+           fa.teacher_name
     FROM recording_sessions rs
     JOIN filming_assignments fa ON fa.id = rs.assignment_id
+    JOIN subjects s ON s.id = fa.subject_id
     WHERE (rs.status IS NULL OR rs.status != 'cancelled')
       AND (fa.status IS NULL OR fa.status != 'cancelled')
     ORDER BY rs.session_date ASC
   `);
 
+  // Build user name lookup
+  const usersDb = await queryAll('SELECT id, name FROM users ORDER BY name ASC');
+  const nameMap = {};
+  for (const u of usersDb) nameMap[u.id] = u.name;
+
   // Aggregate by user id
-  const map = {}; // uid -> { name, total, dates: Set }
-  const users = await queryAll('SELECT id, name FROM users ORDER BY name ASC');
-  for (const u of users) {
-    map[u.id] = { id: u.id, name: u.name, total: 0, dates: new Set() };
-  }
+  const map = {}; // uid -> { name, sessions: [], dates: Set }
 
   for (const s of sessions) {
     const dateStr = s.session_date
@@ -1360,12 +1367,38 @@ app.get('/api/admin/staff-report', requireAuth, requireAdmin, asyncHandler(async
         : s.session_date.toISOString().slice(0, 10))
       : null;
 
-    for (const slot of ['staff_1_id', 'staff_2_id', 'staff_3_id', 'staff_4_id']) {
-      const uid = s[slot];
+    const startH = parseInt((s.start_time || '08:00').substring(0, 2), 10);
+    const endH   = parseInt((s.end_time   || '10:00').substring(0, 2), 10);
+    const isFullDay = startH < 13 && endH > 13;
+
+    // staff_1 + staff_2 = morning slots, staff_3 + staff_4 = afternoon slots
+    const slots = [
+      { key: 'staff_1_id', turno: isFullDay ? 'mañana' : 'sesión' },
+      { key: 'staff_2_id', turno: isFullDay ? 'mañana' : 'sesión' },
+      { key: 'staff_3_id', turno: 'tarde' },
+      { key: 'staff_4_id', turno: 'tarde' },
+    ];
+
+    for (const { key, turno } of slots) {
+      const uid = s[key];
       if (!uid) continue;
-      if (!map[uid]) map[uid] = { id: uid, name: `Usuario #${uid}`, total: 0, dates: new Set() };
+      if (!map[uid]) {
+        map[uid] = {
+          id: uid,
+          name: nameMap[uid] || `Usuario #${uid}`,
+          total: 0,
+          dates: new Set(),
+          entries: []
+        };
+      }
       map[uid].total += 1;
       if (dateStr) map[uid].dates.add(dateStr);
+      map[uid].entries.push({
+        date: dateStr,
+        turno,
+        subject: s.subject_code ? `${s.subject_code} - ${s.subject_name}` : s.subject_name,
+        teacher: s.teacher_name || null
+      });
     }
   }
 
@@ -1377,7 +1410,8 @@ app.get('/api/admin/staff-report', requireAuth, requireAdmin, asyncHandler(async
       name: u.name,
       total: u.total,
       days: u.dates.size,
-      dates: Array.from(u.dates).sort()
+      dates: Array.from(u.dates).sort(),
+      entries: u.entries.sort((a, b) => (a.date || '').localeCompare(b.date || ''))
     }))
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 

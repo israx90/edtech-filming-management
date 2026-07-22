@@ -618,16 +618,36 @@ _Por favor, guarda estos datos de forma segura._`;
         const medal = ['🥇','🥈','🥉'];
         const fmtDate = (d) => {
             const dt = new Date(d + 'T12:00:00');
-            return dt.toLocaleDateString('es-BO', { day:'2-digit', month:'short', year:'numeric' });
+            return dt.toLocaleDateString('es-BO', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
         };
+        const turnoColor = { 'mañana': 'var(--cyan, #22d3ee)', 'tarde': 'var(--amber, #fbbf24)', 'sesión': 'var(--accent)' };
 
         list.innerHTML = data.map((u, i) => {
             const pct  = Math.round((u.total / maxSessions) * 100);
             const bg   = i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-elevated)';
             const rank = i < 3 ? medal[i] : `<span style="font-size:12px; font-weight:700; color:var(--text-muted);">${i + 1}</span>`;
-            const datesHtml = u.dates.map(d =>
-                `<span style="display:inline-block; padding:2px 8px; background:var(--bg-tertiary); border:1px solid var(--border-light); border-radius:4px; font-size:10px; font-family:monospace; color:var(--text-secondary); margin:2px;">${fmtDate(d)}</span>`
-            ).join('');
+
+            // Group entries by date
+            const byDate = {};
+            for (const e of (u.entries || [])) {
+                if (!byDate[e.date]) byDate[e.date] = [];
+                byDate[e.date].push(e);
+            }
+            const datesHtml = Object.entries(byDate).map(([date, entries]) => {
+                const entriesHtml = entries.map(e => {
+                    const tColor = turnoColor[e.turno] || 'var(--text-muted)';
+                    return `<div style="display:flex; align-items:center; gap:6px; margin-left:12px;">
+                        <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:${tColor}; flex-shrink:0;"></span>
+                        <span style="font-size:10px; font-weight:600; color:${tColor}; text-transform:uppercase; min-width:52px;">${e.turno}</span>
+                        <span style="font-size:11px; color:var(--text-primary);">${e.subject}</span>
+                        ${e.teacher ? `<span style="font-size:10px; color:var(--text-muted);">· ${e.teacher}</span>` : ''}
+                    </div>`;
+                }).join('');
+                return `<div style="margin-bottom:8px;">
+                    <div style="font-size:11px; font-weight:700; color:var(--text-secondary); margin-bottom:3px;">${fmtDate(date)}</div>
+                    ${entriesHtml}
+                </div>`;
+            }).join('');
 
             return `
                 <div style="border-bottom:1px solid var(--border-light); background:${bg};" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='${bg}'">
@@ -651,9 +671,9 @@ _Por favor, guarda estos datos de forma segura._`;
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                         </div>
                     </div>
-                    <div class="staff-dates-row" style="display:none; padding:8px 14px 12px 50px;">
-                        <div style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">Días en que asistió:</div>
-                        <div>${datesHtml}</div>
+                    <div class="staff-dates-row" style="display:none; padding:10px 14px 14px 50px; background:var(--bg-tertiary); border-top:1px solid var(--border-light);">
+                        <div style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Detalle de asistencia (${u.days} días, ${u.total} sesiones):</div>
+                        <div>${datesHtml || '<span style="font-size:12px; color:var(--text-muted);">Sin registros detallados</span>'}</div>
                     </div>
                 </div>
             `;
