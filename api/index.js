@@ -1335,7 +1335,7 @@ app.get('/api/query/availability/:date', asyncHandler(async (req, res) => {
 }));
 
 // GET /admin/staff-report — participation count per user
-app.get('/admin/staff-report', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.get('/api/admin/staff-report', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
   // Gather all sessions with their 4 staff slots and dates (exclude cancelled)
   const sessions = await queryAll(`
     SELECT rs.session_date,
