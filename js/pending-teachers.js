@@ -204,18 +204,23 @@ const PendingTeachers = {
         const contacted = allTeachers.filter(t => t.status === 'contacted').length;
         const scheduled = allTeachers.filter(t => t.status === 'scheduled').length;
         const unavailable = allTeachers.filter(t => t.status === 'unavailable').length;
+        const terminados = allTeachers.filter(t => t.status === 'guion_revisado' || t.status === 'guion_incompleto').length;
 
         document.getElementById('pt-total').textContent = total;
         document.getElementById('pt-pending').textContent = pending;
         document.getElementById('pt-contacted').textContent = contacted;
         document.getElementById('pt-scheduled').textContent = scheduled;
         document.getElementById('pt-unavailable').textContent = unavailable;
+        const ptTermEl = document.getElementById('pt-terminados');
+        if (ptTermEl) ptTermEl.textContent = terminados;
 
         // Apply active filter
         let teachers = allTeachers;
         if (this.activeFilter !== 'all') {
             if (this.activeFilter === 'pending') {
                 teachers = allTeachers.filter(t => !t.status || t.status === 'pending');
+            } else if (this.activeFilter === 'terminados') {
+                teachers = allTeachers.filter(t => t.status === 'guion_revisado' || t.status === 'guion_incompleto');
             } else {
                 teachers = allTeachers.filter(t => t.status === this.activeFilter);
             }

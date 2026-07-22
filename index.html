@@ -309,7 +309,7 @@
             </div>
 
             <!-- Status Stats -->
-            <div class="pending-stats" id="pending-stats" style="grid-template-columns: repeat(5, 1fr);">
+            <div class="pending-stats" id="pending-stats" style="grid-template-columns: repeat(6, 1fr);">
                 <div class="pending-stat" style="cursor:pointer;" onclick="PendingTeachers.setFilter('all')">
                     <span class="pending-stat-value" id="pt-total" style="color:var(--text-primary);">0</span>
                     <span class="pending-stat-label">Total</span>
@@ -330,6 +330,10 @@
                     <span class="pending-stat-value" id="pt-unavailable" style="color:var(--red);">0</span>
                     <span class="pending-stat-label">No Disponible</span>
                 </div>
+                <div class="pending-stat" style="cursor:pointer;" onclick="PendingTeachers.setFilter('terminados')">
+                    <span class="pending-stat-value" id="pt-terminados" style="color:var(--accent, #a78bfa);">0</span>
+                    <span class="pending-stat-label">Terminados</span>
+                </div>
             </div>
 
             <!-- Filter Tabs -->
@@ -339,6 +343,7 @@
                 <button class="admin-tab-btn" data-filter="contacted">Contactados</button>
                 <button class="admin-tab-btn" data-filter="scheduled">Agendados</button>
                 <button class="admin-tab-btn" data-filter="unavailable">No Disponible</button>
+                <button class="admin-tab-btn" data-filter="terminados">Terminados</button>
             </div>
 
             <!-- Search Premium -->
