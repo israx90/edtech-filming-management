@@ -1420,9 +1420,17 @@ app.get('/api/admin/staff-report', asyncHandler(async (req, res) => {
       ? (typeof r.date === 'string' ? r.date.slice(0, 10) : r.date.toISOString().slice(0, 10))
       : null;
 
-    const startH = parseInt((r.start_time || '08:00').substring(0, 2), 10);
-    const endH   = parseInt((r.end_time   || '17:00').substring(0, 2), 10);
-    const isFullDay = startH < 13 && endH > 13;
+    // Precise shift detection using 12:00 as the boundary:
+    //   - isMorning : reservation STARTS before 12:00  (covers morning block 08:00–12:00)
+    //   - isAfternoon: reservation ENDS   after  12:00  (covers afternoon block 12:00–20:00+)
+    const startMin = parseInt((r.start_time || '08:00').substring(0, 2), 10) * 60
+                   + parseInt((r.start_time || '08:00').substring(3, 5), 10);
+    const endMin   = parseInt((r.end_time   || '17:00').substring(0, 2), 10) * 60
+                   + parseInt((r.end_time   || '17:00').substring(3, 5), 10);
+    const NOON = 12 * 60; // 720 minutes
+
+    const isMorning   = startMin < NOON;   // starts before noon → has morning content
+    const isAfternoon = endMin   > NOON;   // ends after noon → has afternoon content
 
     let names = [];
     try { names = typeof r.attendees === 'string' ? JSON.parse(r.attendees) : r.attendees; } catch(e) {}
@@ -1431,23 +1439,27 @@ app.get('/api/admin/staff-report', asyncHandler(async (req, res) => {
     for (const rawName of names) {
       if (!rawName || !rawName.trim()) continue;
       const normalized = rawName.toLowerCase().trim();
-      // Try to match to a known user by name
       const uid = nameToId[normalized] || `name:${rawName.trim()}`;
       const displayName = nameMap[uid] || rawName.trim();
 
       ensureUser(uid, displayName);
+      if (dateStr) map[uid].dates.add(dateStr);
 
-      if (isFullDay) {
-        // Full day = counts as 2 entries (mañana + tarde)
-        map[uid].total += 2;
-        if (dateStr) map[uid].dates.add(dateStr);
-        map[uid].entries.push({ date: dateStr, turno: 'mañana', source: 'full-day', subject: r.reason || 'Día completo', teacher: null });
-        map[uid].entries.push({ date: dateStr, turno: 'tarde',  source: 'full-day', subject: r.reason || 'Día completo', teacher: null });
-      } else {
-        const turno = startH < 13 ? 'mañana' : 'tarde';
+      const label = r.reason || (isMorning && isAfternoon ? 'Día completo' : isMorning ? 'Mañana' : 'Tarde');
+      const src   = isMorning && isAfternoon ? 'full-day' : 'reserva';
+
+      if (isMorning) {
         map[uid].total += 1;
-        if (dateStr) map[uid].dates.add(dateStr);
-        map[uid].entries.push({ date: dateStr, turno, source: 'reserva', subject: r.reason || 'Reserva', teacher: null });
+        map[uid].entries.push({ date: dateStr, turno: 'mañana', source: src, subject: label, teacher: null });
+      }
+      if (isAfternoon) {
+        map[uid].total += 1;
+        map[uid].entries.push({ date: dateStr, turno: 'tarde', source: src, subject: label, teacher: null });
+      }
+      // Edge case: reservation entirely before or at noon (e.g. 08:00–12:00 exactly)
+      if (!isMorning && !isAfternoon) {
+        map[uid].total += 1;
+        map[uid].entries.push({ date: dateStr, turno: 'mañana', source: 'reserva', subject: r.reason || 'Reserva', teacher: null });
       }
     }
   }
