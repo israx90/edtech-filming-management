@@ -418,7 +418,12 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
                     API Keys
                 </button>
+                <button class="admin-tab-btn" id="admin-tab-staff-report">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Reporte de Staff
+                </button>
             </div>
+
 
             <!-- Tab: Users -->
             <div class="admin-tab-panel active" id="admin-panel-users">
@@ -647,7 +652,40 @@ PSI-220 Psicología General,Psicología"></textarea>
                     </div>
                 </div>
             </div>
+
+            <!-- Tab: Staff Report -->
+            <div class="admin-tab-panel" id="admin-panel-staff-report" style="display:none;">
+                <div class="admin-section">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+                        <div>
+                            <h4 class="admin-section-title" style="margin:0 0 4px 0;">Reporte de Participación en Filmaciones</h4>
+                            <p style="font-size:12px; color:var(--text-muted); margin:0;">Cuántas veces y en qué días entró cada persona al estudio como apoyo de filmación.</p>
+                        </div>
+                        <button class="btn-sm btn-ghost" id="btn-staff-report-refresh" onclick="AdminPanel.loadStaffReport()">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                            Actualizar
+                        </button>
+                    </div>
+
+                    <!-- KPI Summary Row -->
+                    <div id="staff-report-kpis" style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:24px;"></div>
+
+                    <!-- Leaderboard table -->
+                    <div style="border:1px solid var(--border-light); border-radius:8px; overflow:hidden;">
+                        <!-- Header -->
+                        <div style="display:grid; grid-template-columns:36px 1fr 90px 80px 44px; gap:0; padding:8px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-light);">
+                            <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">#</span>
+                            <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Persona</span>
+                            <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; text-align:center;">Sesiones</span>
+                            <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; text-align:center;">Días</span>
+                            <span></span>
+                        </div>
+                        <div id="staff-report-list" style="min-height:80px;"></div>
+                    </div>
+                </div>
+            </div>
         </section>
+
 
     </main>
 

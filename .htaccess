@@ -1,13 +1,14 @@
 RewriteEngine On
 RewriteBase /
+DirectoryIndex INDEX2.html index.php
 
 # Route all requests starting with /api/ to api/index.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^api/(.*)$ api/index.php?path=/$1 [QSA,L]
 
-# For the frontend routing (if any history mode is used, fallback to index.html)
-# The current app uses simple JS view switching, so index.html works for everything else.
+# For the frontend routing (if any history mode is used, fallback to INDEX2.html)
+# The current app uses simple JS view switching, so INDEX2.html works for everything else.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ index.html [QSA,L]
+RewriteRule ^(.*)$ INDEX2.html [QSA,L]

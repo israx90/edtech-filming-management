@@ -1334,6 +1334,56 @@ app.get('/api/query/availability/:date', asyncHandler(async (req, res) => {
   });
 }));
 
+// GET /admin/staff-report — participation count per user
+app.get('/admin/staff-report', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  // Gather all sessions with their 4 staff slots and dates (exclude cancelled)
+  const sessions = await queryAll(`
+    SELECT rs.session_date,
+           rs.staff_1_id, rs.staff_2_id, rs.staff_3_id, rs.staff_4_id
+    FROM recording_sessions rs
+    JOIN filming_assignments fa ON fa.id = rs.assignment_id
+    WHERE (rs.status IS NULL OR rs.status != 'cancelled')
+      AND (fa.status IS NULL OR fa.status != 'cancelled')
+    ORDER BY rs.session_date ASC
+  `);
+
+  // Aggregate by user id
+  const map = {}; // uid -> { name, total, dates: Set }
+  const users = await queryAll('SELECT id, name FROM users ORDER BY name ASC');
+  for (const u of users) {
+    map[u.id] = { id: u.id, name: u.name, total: 0, dates: new Set() };
+  }
+
+  for (const s of sessions) {
+    const dateStr = s.session_date
+      ? (typeof s.session_date === 'string' ? s.session_date.slice(0, 10)
+        : s.session_date.toISOString().slice(0, 10))
+      : null;
+
+    for (const slot of ['staff_1_id', 'staff_2_id', 'staff_3_id', 'staff_4_id']) {
+      const uid = s[slot];
+      if (!uid) continue;
+      if (!map[uid]) map[uid] = { id: uid, name: `Usuario #${uid}`, total: 0, dates: new Set() };
+      map[uid].total += 1;
+      if (dateStr) map[uid].dates.add(dateStr);
+    }
+  }
+
+  // Serialize and sort descending by total
+  const report = Object.values(map)
+    .filter(u => u.total > 0)
+    .map(u => ({
+      id: u.id,
+      name: u.name,
+      total: u.total,
+      days: u.dates.size,
+      dates: Array.from(u.dates).sort()
+    }))
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+  res.json(report);
+}));
+
 // Error handler
 app.use((err, req, res, next) => {
   console.error('[API ERROR]', err.message);
