@@ -564,18 +564,51 @@ _Por favor, guarda estos datos de forma segura._`;
     // ---- STAFF REPORT ----
     staffReport: [],
 
+    initStaffReportSelectors() {
+        const monthSel = document.getElementById('staff-report-month');
+        const yearSel  = document.getElementById('staff-report-year');
+        if (!monthSel || !yearSel) return;
+
+        // Set current month
+        const now = new Date();
+        monthSel.value = String(now.getMonth() + 1);
+
+        // Populate years (current and a couple back)
+        const cy = now.getFullYear();
+        yearSel.innerHTML = '';
+        for (let y = cy; y >= cy - 2; y--) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            yearSel.appendChild(opt);
+        }
+        yearSel.value = String(cy);
+    },
+
     async loadStaffReport() {
+        // Init selectors on first call
+        const monthSel = document.getElementById('staff-report-month');
+        const yearSel  = document.getElementById('staff-report-year');
+        if (yearSel && yearSel.options.length === 0) this.initStaffReportSelectors();
+
+        const month = monthSel?.value || (new Date().getMonth() + 1);
+        const year  = yearSel?.value  || new Date().getFullYear();
+
         const list = document.getElementById('staff-report-list');
         const kpis = document.getElementById('staff-report-kpis');
-        if (list) list.innerHTML = '<div style="padding:28px; text-align:center; color:var(--text-muted); font-size:13px;">Cargando reporte...</div>';
+
+        const monthNames = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        if (list) list.innerHTML = `<div style="padding:28px; text-align:center; color:var(--text-muted); font-size:13px;">Cargando reporte de ${monthNames[month]} ${year}...</div>`;
         if (kpis) kpis.innerHTML = '';
 
-        const data = await API.get('/admin/staff-report');
+        const data = await API.get(`/admin/staff-report?year=${year}&month=${month}`);
         if (!Array.isArray(data)) {
             if (list) list.innerHTML = '<div style="padding:28px; text-align:center; color:var(--text-muted);">No se pudo cargar el reporte.</div>';
             return;
         }
         this.staffReport = data;
+        this.staffReportMonth = monthNames[month];
+        this.staffReportYear = year;
         this.renderStaffReport();
     },
 
@@ -585,9 +618,10 @@ _Por favor, guarda estos datos de forma segura._`;
         if (!list) return;
 
         const data = this.staffReport;
+        const periodLabel = `${this.staffReportMonth || ''} ${this.staffReportYear || ''}`.trim();
 
         if (data.length === 0) {
-            list.innerHTML = '<div class="empty-state" style="padding:32px 12px;"><p>Nadie ha participado en filmaciones aún</p><span>Asigna staff en las sesiones de filmación</span></div>';
+            list.innerHTML = `<div class="empty-state" style="padding:32px 12px;"><p>Sin participaciones en ${periodLabel}</p><span>No hay sesiones con staff asignado en este período</span></div>`;
             if (kpis) kpis.innerHTML = '';
             return;
         }
@@ -599,9 +633,9 @@ _Por favor, guarda estos datos de forma segura._`;
         // KPI cards
         if (kpis) {
             kpis.innerHTML = [
-                { label: 'Total de Participaciones', value: totalSessions, icon: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>', color: 'var(--accent)' },
-                { label: 'Personas con Registros',  value: data.length,   icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', color: '#a78bfa' },
-                { label: 'Líder en Filmaciones',    value: topParticipant, icon: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>', color: '#fbbf24' },
+                { label: 'Total Participaciones', value: totalSessions, icon: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>', color: 'var(--accent)' },
+                { label: 'Personas Activas',      value: data.length,   icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', color: '#a78bfa' },
+                { label: 'Líder del Mes',         value: topParticipant, icon: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>', color: '#fbbf24' },
             ].map(k => `
                 <div style="padding:16px 18px; background:var(--bg-card); border:1px solid var(--border-light); border-radius:8px; display:flex; align-items:center; gap:14px;">
                     <div style="width:40px; height:40px; border-radius:8px; background:${k.color}20; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
@@ -618,7 +652,7 @@ _Por favor, guarda estos datos de forma segura._`;
         const medal = ['🥇','🥈','🥉'];
         const fmtDate = (d) => {
             const dt = new Date(d + 'T12:00:00');
-            return dt.toLocaleDateString('es-BO', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+            return dt.toLocaleDateString('es-BO', { weekday:'short', day:'2-digit', month:'short' });
         };
         const turnoColor = { 'mañana': 'var(--cyan, #22d3ee)', 'tarde': 'var(--amber, #fbbf24)', 'sesión': 'var(--accent)' };
 
@@ -626,6 +660,7 @@ _Por favor, guarda estos datos de forma segura._`;
             const pct  = Math.round((u.total / maxSessions) * 100);
             const bg   = i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-elevated)';
             const rank = i < 3 ? medal[i] : `<span style="font-size:12px; font-weight:700; color:var(--text-muted);">${i + 1}</span>`;
+            const rowId = `staff-detail-${u.id}`;
 
             // Group entries by date
             const byDate = {};
@@ -651,7 +686,7 @@ _Por favor, guarda estos datos de forma segura._`;
 
             return `
                 <div style="border-bottom:1px solid var(--border-light); background:${bg};" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='${bg}'">
-                    <div style="display:grid; grid-template-columns:36px 1fr 90px 80px 44px; gap:0; padding:10px 14px; align-items:center; cursor:pointer;" onclick="this.closest('div').querySelector('.staff-dates-row').style.display = this.closest('div').querySelector('.staff-dates-row').style.display === 'none' ? 'block' : 'none'">
+                    <div style="display:grid; grid-template-columns:36px 1fr 90px 80px 44px; gap:0; padding:10px 14px; align-items:center; cursor:pointer;" onclick="var el=document.getElementById('${rowId}'); el.style.display = el.style.display==='none'?'block':'none'">
                         <div style="font-size:18px; text-align:center;">${rank}</div>
                         <div>
                             <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:5px;">${u.name}</div>
@@ -671,7 +706,7 @@ _Por favor, guarda estos datos de forma segura._`;
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                         </div>
                     </div>
-                    <div class="staff-dates-row" style="display:none; padding:10px 14px 14px 50px; background:var(--bg-tertiary); border-top:1px solid var(--border-light);">
+                    <div id="${rowId}" style="display:none; padding:10px 14px 14px 50px; background:var(--bg-tertiary); border-top:1px solid var(--border-light);">
                         <div style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Detalle de asistencia (${u.days} días, ${u.total} sesiones):</div>
                         <div>${datesHtml || '<span style="font-size:12px; color:var(--text-muted);">Sin registros detallados</span>'}</div>
                     </div>

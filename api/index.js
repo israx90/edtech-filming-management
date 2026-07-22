@@ -1339,7 +1339,10 @@ app.get('/api/admin/staff-report', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
   if (!requireAdmin(user, res)) return;
 
-  // Gather all sessions with staff slots, dates, times and subject info
+  const year  = parseInt(req.query.year)  || new Date().getFullYear();
+  const month = parseInt(req.query.month) || (new Date().getMonth() + 1);
+
+  // Gather sessions for the requested month with staff slots, dates, times and subject info
   const sessions = await queryAll(`
     SELECT rs.session_date, rs.start_time, rs.end_time,
            rs.staff_1_id, rs.staff_2_id, rs.staff_3_id, rs.staff_4_id,
@@ -1350,8 +1353,10 @@ app.get('/api/admin/staff-report', asyncHandler(async (req, res) => {
     JOIN subjects s ON s.id = fa.subject_id
     WHERE (rs.status IS NULL OR rs.status != 'cancelled')
       AND (fa.status IS NULL OR fa.status != 'cancelled')
+      AND EXTRACT(YEAR FROM rs.session_date) = ?
+      AND EXTRACT(MONTH FROM rs.session_date) = ?
     ORDER BY rs.session_date ASC
-  `);
+  `, [year, month]);
 
   // Build user name lookup
   const usersDb = await queryAll('SELECT id, name FROM users ORDER BY name ASC');
