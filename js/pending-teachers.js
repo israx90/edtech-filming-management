@@ -199,13 +199,16 @@ const PendingTeachers = {
         const list = document.getElementById('pending-list');
         const allTeachers = this.teachers;
 
-        // Compute stats from ALL teachers
-        const total = allTeachers.length;
-        const pending = allTeachers.filter(t => !t.status || t.status === 'pending').length;
-        const contacted = allTeachers.filter(t => t.status === 'contacted').length;
-        const scheduled = allTeachers.filter(t => t.status === 'scheduled').length;
+        // Helper: a teacher is "terminado" if their filming assignment is completed
+        // Uses assignment_status from the DB join (correlated subquery via subjects)
+        const isTerminado = t => t.assignment_status === 'completed';
+
+        const total       = allTeachers.length;
+        const pending     = allTeachers.filter(t => !t.status || t.status === 'pending').length;
+        const contacted   = allTeachers.filter(t => t.status === 'contacted').length;
+        const scheduled   = allTeachers.filter(t => t.status === 'scheduled').length;
         const unavailable = allTeachers.filter(t => t.status === 'unavailable').length;
-        const terminados = allTeachers.filter(t => t.assignment_status === 'completed').length;
+        const terminados  = allTeachers.filter(isTerminado).length;
 
         document.getElementById('pt-total').textContent = total;
         document.getElementById('pt-pending').textContent = pending;
@@ -215,13 +218,17 @@ const PendingTeachers = {
         const ptTermEl = document.getElementById('pt-terminados');
         if (ptTermEl) ptTermEl.textContent = terminados;
 
+        // Debug: log how many have assignment_status
+        console.log('[PendingTeachers] terminados:', terminados, '/', total,
+            '| sample assignment_statuses:', allTeachers.slice(0,5).map(t => t.assignment_status));
+
         // Apply active filter
         let teachers = allTeachers;
         if (this.activeFilter !== 'all') {
             if (this.activeFilter === 'pending') {
                 teachers = allTeachers.filter(t => !t.status || t.status === 'pending');
             } else if (this.activeFilter === 'terminados') {
-                teachers = allTeachers.filter(t => t.assignment_status === 'completed');
+                teachers = allTeachers.filter(isTerminado);
             } else {
                 teachers = allTeachers.filter(t => t.status === this.activeFilter);
             }
