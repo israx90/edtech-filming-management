@@ -116,6 +116,23 @@ const asyncHandler = fn => (req, res, next) => {
       console.log('[Seed] Feriados bolivianos insertados por defecto.');
     }
   } catch (e) { console.error('[Seed] holidays:', e.message); }
+
+  // Create activity_log table if it doesn't exist
+  try {
+    await execute(`
+      CREATE TABLE IF NOT EXISTS activity_log (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        user_id     INT DEFAULT NULL,
+        user_name   VARCHAR(255) NOT NULL,
+        action      VARCHAR(255) NOT NULL,
+        entity_type VARCHAR(100) DEFAULT NULL,
+        entity_id   INT DEFAULT NULL,
+        details     TEXT DEFAULT NULL,
+        created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('[Migration] activity_log table ready.');
+  } catch (e) { console.error('[Migration] activity_log table:', e.message); }
 })();
 
 // --- HEALTH CHECK (diagnóstico) ---
@@ -823,8 +840,13 @@ app.get('/api/activity-log', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
   if (!requireAdmin(user, res)) return;
   const limit = parseInt(req.query.limit || 100);
-  const logs = await queryAll('SELECT * FROM activity_log ORDER BY created_at DESC LIMIT ?', [limit]);
-  res.json(logs);
+  try {
+    const logs = await queryAll('SELECT * FROM activity_log ORDER BY created_at DESC LIMIT ?', [limit]);
+    res.json(Array.isArray(logs) ? logs : []);
+  } catch (e) {
+    console.error('[activity-log]', e.message);
+    res.json([]);
+  }
 }));
 
 // --- PENDING TEACHERS ---

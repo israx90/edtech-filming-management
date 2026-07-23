@@ -290,9 +290,16 @@ _Por favor, guarda estos datos de forma segura._`;
 
     // ---- ACTIVITY LOG ----
     async loadLog() {
-        this.log = await API.get('/activity-log?limit=100');
+        try {
+            const result = await API.get('/activity-log?limit=100');
+            this.log = Array.isArray(result) ? result : [];
+        } catch (e) {
+            console.warn('[loadLog]', e);
+            this.log = [];
+        }
         this.renderLog();
     },
+
 
     renderLog() {
         const list = document.getElementById('activity-log-list');
