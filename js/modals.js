@@ -1592,7 +1592,11 @@ const Modals = {
         const isCanEdit = App.user && ['admin', 'post_productor'].includes(App.user.role);
 
         addSessionBtn.style.display = isCanEdit ? '' : 'none';
-        completeBtn.style.display = (isCanEdit && data.status === 'in_progress') ? '' : 'none';
+        completeBtn.style.display = (isCanEdit && data.status !== 'completed' && data.status !== 'cancelled') ? '' : 'none';
+        // Update button text based on status
+        if (completeBtn.style.display !== 'none') {
+            completeBtn.textContent = '✅ Filmación Terminada';
+        }
 
         if (isCanEdit) {
             // Staff is now shown as a per-session summary above
