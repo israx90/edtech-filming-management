@@ -827,18 +827,21 @@ app.get('/api/pending-teachers', asyncHandler(async (req, res) => {
     const active = await queryOne('SELECT id FROM semesters WHERE is_active = true');
     semId = active ? active.id : 0;
   }
-  // Join with filming_assignments to pick up assignment status (e.g. 'completed')
+  // Subquery: get the latest non-cancelled filming_assignment per teacher in this semester
   res.json(await queryAll(`
     SELECT pt.*,
-           u.name as added_by_name,
-           fa.status as assignment_status,
-           fa.id     as assignment_id
+           u.name  AS added_by_name,
+           fa.status AS assignment_status,
+           fa.id     AS assignment_id
     FROM pending_teachers pt
     LEFT JOIN users u ON u.id = pt.added_by_user_id
-    LEFT JOIN filming_assignments fa
-      ON LOWER(TRIM(fa.teacher_name)) = LOWER(TRIM(pt.name))
-      AND fa.semester_id = pt.semester_id
-      AND (fa.status IS NULL OR fa.status != 'cancelled')
+    LEFT JOIN (
+      SELECT fa2.id, fa2.teacher_name, fa2.status, s2.semester_id
+      FROM filming_assignments fa2
+      JOIN subjects s2 ON s2.id = fa2.subject_id
+      WHERE fa2.status IS NULL OR fa2.status != 'cancelled'
+    ) fa ON LOWER(TRIM(fa.teacher_name)) = LOWER(TRIM(pt.name))
+         AND fa.semester_id = pt.semester_id
     WHERE pt.semester_id = ?
     ORDER BY
       CASE COALESCE(pt.status,'pending')
