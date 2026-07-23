@@ -1592,10 +1592,24 @@ const Modals = {
         const isCanEdit = App.user && ['admin', 'post_productor'].includes(App.user.role);
 
         addSessionBtn.style.display = isCanEdit ? '' : 'none';
-        completeBtn.style.display = (isCanEdit && data.status !== 'completed' && data.status !== 'cancelled') ? '' : 'none';
-        // Update button text based on status
-        if (completeBtn.style.display !== 'none') {
-            completeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px; vertical-align:-2px;"><polyline points="20 6 9 17 4 12"/></svg> Filmación Terminada';
+
+        // Always show the button for admins — change style if already completed
+        if (isCanEdit && data.status !== 'cancelled') {
+            completeBtn.style.display = '';
+            if (data.status === 'completed') {
+                // Already done — show as disabled/muted state
+                completeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px; vertical-align:-2px;"><polyline points="20 6 9 17 4 12"/></svg> Ya Completada';
+                completeBtn.style.opacity = '0.55';
+                completeBtn.style.cursor = 'default';
+                completeBtn.style.pointerEvents = 'none';
+            } else {
+                completeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px; vertical-align:-2px;"><polyline points="20 6 9 17 4 12"/></svg> Filmación Terminada';
+                completeBtn.style.opacity = '';
+                completeBtn.style.cursor = '';
+                completeBtn.style.pointerEvents = '';
+            }
+        } else {
+            completeBtn.style.display = 'none';
         }
 
         if (isCanEdit) {
