@@ -827,7 +827,30 @@ app.get('/api/pending-teachers', asyncHandler(async (req, res) => {
     const active = await queryOne('SELECT id FROM semesters WHERE is_active = true');
     semId = active ? active.id : 0;
   }
-  res.json(await queryAll("SELECT pt.*, u.name as added_by_name FROM pending_teachers pt LEFT JOIN users u ON u.id = pt.added_by_user_id WHERE pt.semester_id = ? ORDER BY CASE COALESCE(pt.status,'pending') WHEN 'guion_revisado' THEN 1 WHEN 'pending' THEN 2 WHEN 'guion_incompleto' THEN 3 WHEN 'contacted' THEN 4 WHEN 'scheduled' THEN 5 WHEN 'unavailable' THEN 6 ELSE 7 END, pt.created_at ASC", [semId]));
+  // Join with filming_assignments to pick up assignment status (e.g. 'completed')
+  res.json(await queryAll(`
+    SELECT pt.*,
+           u.name as added_by_name,
+           fa.status as assignment_status,
+           fa.id     as assignment_id
+    FROM pending_teachers pt
+    LEFT JOIN users u ON u.id = pt.added_by_user_id
+    LEFT JOIN filming_assignments fa
+      ON LOWER(TRIM(fa.teacher_name)) = LOWER(TRIM(pt.name))
+      AND fa.semester_id = pt.semester_id
+      AND (fa.status IS NULL OR fa.status != 'cancelled')
+    WHERE pt.semester_id = ?
+    ORDER BY
+      CASE COALESCE(pt.status,'pending')
+        WHEN 'guion_revisado'   THEN 1
+        WHEN 'pending'          THEN 2
+        WHEN 'guion_incompleto' THEN 3
+        WHEN 'contacted'        THEN 4
+        WHEN 'scheduled'        THEN 5
+        WHEN 'unavailable'      THEN 6
+        ELSE 7
+      END, pt.created_at ASC
+  `, [semId]));
 }));
 app.post('/api/pending-teachers', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);

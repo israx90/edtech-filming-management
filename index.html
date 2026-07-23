@@ -1380,16 +1380,9 @@ PSI-220 Psicología General,Psicología"></textarea>
                     <input type="date" id="input-res-end-date" class="input" required>
                 </div>
             </div>
-            <div class="form-grid">
-                <div class="form-row">
-                    <label for="input-res-start">Hora Inicio</label>
-                    <input type="time" id="input-res-start" class="input" value="08:00" required>
-                </div>
-                <div class="form-row">
-                    <label for="input-res-end">Hora Fin</label>
-                    <input type="time" id="input-res-end" class="input" value="10:00" required>
-                </div>
-            </div>
+
+            <!-- Per-day schedule grid (populated dynamically) -->
+            <div id="day-schedule-grid" style="margin-top:12px;"></div>
             <div class="form-row">
                 <label for="input-res-reason">Motivo / Notas</label>
                 <input type="text" id="input-res-reason" class="input" placeholder="Ej: Reserva de estudio para fotos" required>

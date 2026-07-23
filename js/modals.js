@@ -1011,7 +1011,7 @@ const Modals = {
         document.getElementById('input-res-end-date').value = today;
         document.getElementById('input-res-end-date').parentElement.style.display = 'block';
         document.getElementById('reservation-error').style.display = 'none';
-        
+
         document.querySelector('#modal-reservation h3').textContent = 'Nueva Reserva';
 
         // Reset displacement
@@ -1019,51 +1019,56 @@ const Modals = {
         if (dispCb) dispCb.checked = false;
         this._updateDisplacementUI(false);
 
-        // Load staff and reset attendees
+        // Reset fields
         document.getElementById('input-res-reason').value = '';
         document.getElementById('attendees-list').innerHTML = '';
-        ['input-res-start', 'input-res-end'].forEach(id => this.convertToTimeSelect(id));
-        
+
+        // Load staff
         Calendar._staffUsers = await API.get('/staff');
 
         this.open('modal-reservation');
         this.initDatePickers('modal-reservation');
+
+        // Build initial 1-day grid and wire date-change listeners
+        this.buildDayScheduleGrid();
+        const rebuildGrid = () => this.buildDayScheduleGrid();
+        ['input-res-date', 'input-res-end-date'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.removeEventListener('change', rebuildGrid); el.addEventListener('change', rebuildGrid); }
+        });
     },
 
     async openEditReservation(r) {
         this.currentReservationId = r.id;
-        
-        // Find the full date range of this multi-day reservation from sibling rows
+
+        // Group ALL sibling rows by date (same user, reason — may have different times per day)
         const siblings = (Calendar.reservations || []).filter(r2 =>
-            r2.user_id === r.user_id &&
-            r2.start_time === r.start_time &&
-            r2.end_time === r.end_time &&
-            r2.reason === r.reason
+            r2.user_id === r.user_id && r2.reason === r.reason
         );
-        const siblingDates = siblings.map(r2 => typeof r2.date === 'string' ? r2.date.substring(0, 10) : r2.date).sort();
-        const rangeStart = siblingDates[0] || r.date;
-        const rangeEnd = siblingDates[siblingDates.length - 1] || r.date;
+        // Build a map: dateStr -> {start_time, end_time}
+        const dayTimeMap = {};
+        siblings.forEach(r2 => {
+            const d = typeof r2.date === 'string' ? r2.date.substring(0, 10) : r2.date;
+            dayTimeMap[d] = { start_time: r2.start_time.substring(0, 5), end_time: r2.end_time.substring(0, 5) };
+        });
+        const siblingDates = Object.keys(dayTimeMap).sort();
+        const rangeStart = siblingDates[0] || (typeof r.date === 'string' ? r.date.substring(0,10) : r.date);
+        const rangeEnd   = siblingDates[siblingDates.length - 1] || rangeStart;
 
         document.getElementById('input-res-date').value = rangeStart;
         document.getElementById('input-res-end-date').value = rangeEnd;
         document.getElementById('input-res-end-date').parentElement.style.display = 'block';
-
-        // Convert to selects
-        ['input-res-start', 'input-res-end'].forEach(id => this.convertToTimeSelect(id));
-        document.getElementById('input-res-start').value = r.start_time.substring(0, 5);
-        document.getElementById('input-res-end').value = r.end_time.substring(0, 5);
-        
         document.getElementById('input-res-reason').value = r.reason;
         document.getElementById('reservation-error').style.display = 'none';
-        
+
         // Displacement state
         const isDisp = r.is_displacement == 1 || r.is_displacement === true;
         const dispCb = document.getElementById('input-res-displacement');
         if (dispCb) dispCb.checked = isDisp;
         this._updateDisplacementUI(isDisp);
-        
+
         document.querySelector('#modal-reservation h3').textContent = 'Editar Reserva';
-        
+
         // Load staff then populate attendees
         Calendar._staffUsers = await API.get('/staff');
         const attendeesList = document.getElementById('attendees-list');
@@ -1073,9 +1078,17 @@ const Modals = {
             try { existingAttendees = typeof r.attendees === 'string' ? JSON.parse(r.attendees) : r.attendees; } catch(e) {}
         }
         existingAttendees.forEach(a => Calendar.addAttendeeField(a));
-        
+
         this.open('modal-reservation');
         this.initDatePickers('modal-reservation');
+
+        // Build per-day grid, pre-filled with existing times per day
+        this.buildDayScheduleGrid(dayTimeMap);
+        const rebuildGrid = () => this.buildDayScheduleGrid();
+        ['input-res-date', 'input-res-end-date'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.removeEventListener('change', rebuildGrid); el.addEventListener('change', rebuildGrid); }
+        });
     },
 
     // Displacement toggle helper
@@ -1116,38 +1129,165 @@ const Modals = {
         if (statusText) statusText.style.color = isOn ? '#fbbf24' : '';
     },
 
+    // ── Helper: generate time options for a <select> ──
+    _makeTimeSelect(value = '08:00') {
+        const TIMES = ['08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30',
+                       '13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30',
+                       '18:00','18:30','19:00','19:30','20:00','20:30'];
+        const sel = document.createElement('select');
+        sel.className = 'input select day-time-select';
+        sel.style.cssText = 'flex:1; font-size:12px; height:32px; padding:0 8px;';
+        TIMES.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t; opt.textContent = t;
+            if (t === value) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        return sel;
+    },
+
+    // ── Build the per-day schedule grid ──
+    buildDayScheduleGrid(existingTimeMap = {}) {
+        const grid = document.getElementById('day-schedule-grid');
+        if (!grid) return;
+        const startVal = document.getElementById('input-res-date')?.value;
+        const endVal   = document.getElementById('input-res-end-date')?.value;
+        if (!startVal) { grid.innerHTML = ''; return; }
+
+        const [sy, sm, sd] = startVal.split('-').map(Number);
+        const [ey, em, ed] = (endVal || startVal).split('-').map(Number);
+        const startD = new Date(sy, sm - 1, sd);
+        const endD   = new Date(ey, em - 1, ed);
+
+        const MAX_DAYS = 31;
+        const days = [];
+        for (let d = new Date(startD); d <= endD && days.length < MAX_DAYS; d.setDate(d.getDate() + 1)) {
+            days.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+        }
+
+        const WEEKDAYS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+        const MONTHS   = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+        grid.innerHTML = '';
+        const header = document.createElement('div');
+        header.style.cssText = 'font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;';
+        header.textContent = `Horario por Día (${days.length} día${days.length !== 1 ? 's' : ''})`;
+        grid.appendChild(header);
+
+        days.forEach(dateStr => {
+            const dt  = new Date(dateStr + 'T12:00:00');
+            const dow = WEEKDAYS[dt.getDay()];
+            const lbl = `${dow} ${dt.getDate()} ${MONTHS[dt.getMonth()]}`;
+            const isWeekend = dt.getDay() === 0 || dt.getDay() === 6;
+
+            // Pre-fill from map or defaults
+            const preset = existingTimeMap[dateStr];
+            const defStart = preset?.start_time || '08:00';
+            const defEnd   = preset?.end_time   || '20:30';
+
+            const row = document.createElement('div');
+            row.className = 'day-schedule-row';
+            row.dataset.date = dateStr;
+            row.style.cssText = `display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; margin-bottom:5px; background:${isWeekend ? 'rgba(248,113,113,0.05)' : 'var(--bg-elevated)'}; border:1px solid var(--border-light);`;
+
+            // Date label
+            const dateLbl = document.createElement('span');
+            dateLbl.style.cssText = `font-size:12px; font-weight:600; color:${isWeekend ? 'var(--red)' : 'var(--text-secondary)'}; min-width:88px; flex-shrink:0;`;
+            dateLbl.textContent = lbl;
+
+            // Quick-set buttons
+            const btnGroup = document.createElement('div');
+            btnGroup.style.cssText = 'display:flex; gap:4px; flex-shrink:0;';
+            const quickSets = [
+                { label: '🌅 Mañ', start: '08:00', end: '12:00', title: 'Mañana 08:00–12:00' },
+                { label: '🌆 Tar', start: '12:00', end: '20:30', title: 'Tarde 12:00–20:30'  },
+                { label: '☀️ Full', start: '08:00', end: '20:30', title: 'Día Completo 08:00–20:30' },
+            ];
+            quickSets.forEach(qs => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = qs.label;
+                btn.title = qs.title;
+                btn.style.cssText = 'font-size:10px; padding:2px 6px; border-radius:4px; border:1px solid var(--border); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; white-space:nowrap; transition:all .15s;';
+                btn.onmouseenter = () => btn.style.background = 'var(--accent)';
+                btn.onmouseleave = () => btn.style.background = 'var(--bg-tertiary)';
+                btn.onclick = () => {
+                    row.querySelector('.start-sel').value = qs.start;
+                    row.querySelector('.end-sel').value   = qs.end;
+                };
+                btnGroup.appendChild(btn);
+            });
+
+            // Start + End selects
+            const startSel = this._makeTimeSelect(defStart);
+            startSel.classList.add('start-sel');
+            const arrow = document.createElement('span');
+            arrow.textContent = '→';
+            arrow.style.cssText = 'color:var(--text-muted); font-size:12px; flex-shrink:0;';
+            const endSel = this._makeTimeSelect(defEnd);
+            endSel.classList.add('end-sel');
+
+            row.appendChild(dateLbl);
+            row.appendChild(btnGroup);
+            row.appendChild(startSel);
+            row.appendChild(arrow);
+            row.appendChild(endSel);
+            grid.appendChild(row);
+        });
+    },
+
     async saveReservation() {
         const start_date = document.getElementById('input-res-date').value;
-        const end_date = document.getElementById('input-res-end-date').value;
-        const start_time = document.getElementById('input-res-start').value;
-        const end_time = document.getElementById('input-res-end').value;
-        const reason = document.getElementById('input-res-reason').value.trim();
+        const end_date   = document.getElementById('input-res-end-date').value || start_date;
+        const reason     = document.getElementById('input-res-reason').value.trim();
         const is_displacement = document.getElementById('input-res-displacement')?.checked ? 1 : 0;
 
-        if (!start_date || !start_time || !end_time || !reason) return showToast('Todos los campos son obligatorios', 'error');
+        if (!start_date || !reason) return showToast('Motivo y fechas son obligatorios', 'error');
+        if (new Date(start_date) > new Date(end_date)) return showToast('Fecha fin no puede ser menor a fecha inicio', 'error');
+
+        // Collect per-day schedule
+        const dayRows = Array.from(document.querySelectorAll('#day-schedule-grid .day-schedule-row'));
+        if (dayRows.length === 0) return showToast('Sin días en el rango', 'error');
 
         // Collect attendees
         const attendees = Array.from(document.querySelectorAll('#attendees-list .attendee-input'))
             .map(i => i.value.trim()).filter(Boolean);
+        const attendeesJson = JSON.stringify(attendees);
 
-        if (!start_date || !end_date) return showToast('Las fechas son obligatorias', 'error');
-        if (new Date(start_date) > new Date(end_date)) return showToast('Fecha fin no puede ser menor a fecha inicio', 'error');
+        const errDiv = document.getElementById('reservation-error');
+        errDiv.style.display = 'none';
 
-        let result;
+        // If editing: delete all existing sibling rows, then re-create each day fresh
         if (this.currentReservationId) {
-            result = await API.put(`/reservations/${this.currentReservationId}`, { start_date, end_date, start_time, end_time, reason, is_displacement, attendees: JSON.stringify(attendees) });
-        } else {
-            result = await API.post('/reservations', { start_date, end_date, start_time, end_time, reason, is_displacement, attendees: JSON.stringify(attendees) });
-        }
-        
-        if (result.error) {
-            if (result.error.includes('Conflicto')) {
-                const errDiv = document.getElementById('reservation-error');
-                errDiv.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:middle"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>' + result.error;
-                errDiv.style.display = 'block';
-                return;
+            // Collect all sibling IDs (same user + reason) from local data
+            const origRes = (Calendar.reservations || []).find(r2 => r2.id === this.currentReservationId);
+            const siblingIds = (Calendar.reservations || [])
+                .filter(r2 => origRes && r2.user_id === origRes.user_id && r2.reason === origRes.reason)
+                .map(r2 => r2.id);
+            for (const id of siblingIds) {
+                await API.del(`/reservations/${id}`);
             }
-            return showToast(result.error, 'error');
+        }
+
+        // POST each day individually
+        let firstError = null;
+        for (const row of dayRows) {
+            const date       = row.dataset.date;
+            const start_time = row.querySelector('.start-sel').value;
+            const end_time   = row.querySelector('.end-sel').value;
+            if (!date) continue;
+            const result = await API.post('/reservations', {
+                start_date: date, end_date: date,
+                start_time, end_time, reason, is_displacement,
+                attendees: attendeesJson
+            });
+            if (result?.error && !firstError) firstError = result.error;
+        }
+
+        if (firstError) {
+            errDiv.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:middle"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>' + firstError;
+            errDiv.style.display = 'block';
+            return;
         }
 
         showToast('Reserva guardada', 'success');

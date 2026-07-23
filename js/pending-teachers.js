@@ -8,7 +8,8 @@ const TEACHER_STATUS = {
     scheduled:        { label: 'Agendado',           color: '#34d399', bg: 'rgba(52,211,153,0.15)' },
     unavailable:      { label: 'No Disponible',      color: '#f87171', bg: 'rgba(248,113,113,0.15)' },
     guion_revisado:   { label: 'Guión Terminado',     color: '#a78bfa', bg: 'rgba(167,139,250,0.2)'  },
-    guion_incompleto: { label: 'Guión Incompleto',   color: '#fb923c', bg: 'rgba(251,146,60,0.2)'   }
+    guion_incompleto: { label: 'Guión Incompleto',   color: '#fb923c', bg: 'rgba(251,146,60,0.2)'   },
+    terminados:       { label: 'Filmación Terminada', color: '#34d399', bg: 'rgba(52,211,153,0.2)'   }
 };
 
 const SCRIPT_STATUS_LABELS = {
@@ -204,7 +205,7 @@ const PendingTeachers = {
         const contacted = allTeachers.filter(t => t.status === 'contacted').length;
         const scheduled = allTeachers.filter(t => t.status === 'scheduled').length;
         const unavailable = allTeachers.filter(t => t.status === 'unavailable').length;
-        const terminados = allTeachers.filter(t => t.status === 'guion_revisado' || t.status === 'guion_incompleto').length;
+        const terminados = allTeachers.filter(t => t.assignment_status === 'completed').length;
 
         document.getElementById('pt-total').textContent = total;
         document.getElementById('pt-pending').textContent = pending;
@@ -220,7 +221,7 @@ const PendingTeachers = {
             if (this.activeFilter === 'pending') {
                 teachers = allTeachers.filter(t => !t.status || t.status === 'pending');
             } else if (this.activeFilter === 'terminados') {
-                teachers = allTeachers.filter(t => t.status === 'guion_revisado' || t.status === 'guion_incompleto');
+                teachers = allTeachers.filter(t => t.assignment_status === 'completed');
             } else {
                 teachers = allTeachers.filter(t => t.status === this.activeFilter);
             }
@@ -368,7 +369,10 @@ const PendingTeachers = {
                         <div class="pt-card-top">
                             <div class="pt-avatar">${t.name.charAt(0).toUpperCase()}</div>
                             <div class="pt-info">
-                                <div class="pt-name">${t.name} ${alarmIndicator}</div>
+                                <div class="pt-name">
+                                    ${t.name} ${alarmIndicator}
+                                    ${t.assignment_status === 'completed' ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#34d399;background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);border-radius:4px;padding:1px 6px;margin-left:4px;vertical-align:middle;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>FILMADA</span>` : ''}
+                                </div>
                                 <div class="pt-subject">
                                     ${t.subject_code ? `<span class="pt-subject-code">${t.subject_code}</span> ` : ''}${t.subject}
                                     ${t.subject_type ? `<span class="ext-tag" style="background:${tc.bg};color:${tc.color};font-weight:600;">${t.subject_type}</span>` : ''}
