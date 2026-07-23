@@ -1199,14 +1199,14 @@ const Modals = {
             const btnGroup = document.createElement('div');
             btnGroup.style.cssText = 'display:flex; gap:4px; flex-shrink:0;';
             const quickSets = [
-                { label: '🌅 Mañ', start: '08:00', end: '12:00', title: 'Mañana 08:00–12:00' },
-                { label: '🌆 Tar', start: '12:00', end: '20:30', title: 'Tarde 12:00–20:30'  },
-                { label: '☀️ Full', start: '08:00', end: '20:30', title: 'Día Completo 08:00–20:30' },
+                { label: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px; vertical-align:-2px;"><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg> Mañ', start: '08:00', end: '12:00', title: 'Mañana 08:00–12:00' },
+                { label: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px; vertical-align:-2px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Tar', start: '12:00', end: '20:30', title: 'Tarde 12:00–20:30'  },
+                { label: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px; vertical-align:-2px;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> Full', start: '08:00', end: '20:30', title: 'Día Completo 08:00–20:30' },
             ];
             quickSets.forEach(qs => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.textContent = qs.label;
+                btn.innerHTML = qs.label;
                 btn.title = qs.title;
                 btn.style.cssText = 'font-size:10px; padding:2px 6px; border-radius:4px; border:1px solid var(--border); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; white-space:nowrap; transition:all .15s;';
                 btn.onmouseenter = () => btn.style.background = 'var(--accent)';
@@ -1595,7 +1595,7 @@ const Modals = {
         completeBtn.style.display = (isCanEdit && data.status !== 'completed' && data.status !== 'cancelled') ? '' : 'none';
         // Update button text based on status
         if (completeBtn.style.display !== 'none') {
-            completeBtn.textContent = '✅ Filmación Terminada';
+            completeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px; vertical-align:-2px;"><polyline points="20 6 9 17 4 12"/></svg> Filmación Terminada';
         }
 
         if (isCanEdit) {

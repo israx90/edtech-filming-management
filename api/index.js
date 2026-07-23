@@ -818,6 +818,15 @@ app.put('/api/notifications/:id/read', asyncHandler(async (req, res) => {
   res.json({ success: true });
 }));
 
+// --- ACTIVITY LOG ---
+app.get('/api/activity-log', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAdmin(user, res)) return;
+  const limit = parseInt(req.query.limit || 100);
+  const logs = await queryAll('SELECT * FROM activity_log ORDER BY created_at DESC LIMIT ?', [limit]);
+  res.json(logs);
+}));
+
 // --- PENDING TEACHERS ---
 app.get('/api/pending-teachers', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
