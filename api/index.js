@@ -827,21 +827,28 @@ app.get('/api/pending-teachers', asyncHandler(async (req, res) => {
     const active = await queryOne('SELECT id FROM semesters WHERE is_active = true');
     semId = active ? active.id : 0;
   }
-  // Subquery: get the latest non-cancelled filming_assignment per teacher in this semester
+  // Use correlated subqueries to get assignment status — simple and reliable
   res.json(await queryAll(`
     SELECT pt.*,
-           u.name  AS added_by_name,
-           fa.status AS assignment_status,
-           fa.id     AS assignment_id
+           u.name AS added_by_name,
+           (SELECT fa.status
+            FROM filming_assignments fa
+            JOIN subjects s ON s.id = fa.subject_id
+            WHERE LOWER(TRIM(fa.teacher_name)) = LOWER(TRIM(pt.name))
+              AND s.semester_id = pt.semester_id
+              AND fa.status != 'cancelled'
+            ORDER BY fa.created_at DESC LIMIT 1
+           ) AS assignment_status,
+           (SELECT fa.id
+            FROM filming_assignments fa
+            JOIN subjects s ON s.id = fa.subject_id
+            WHERE LOWER(TRIM(fa.teacher_name)) = LOWER(TRIM(pt.name))
+              AND s.semester_id = pt.semester_id
+              AND fa.status != 'cancelled'
+            ORDER BY fa.created_at DESC LIMIT 1
+           ) AS assignment_id
     FROM pending_teachers pt
     LEFT JOIN users u ON u.id = pt.added_by_user_id
-    LEFT JOIN (
-      SELECT fa2.id, fa2.teacher_name, fa2.status, s2.semester_id
-      FROM filming_assignments fa2
-      JOIN subjects s2 ON s2.id = fa2.subject_id
-      WHERE fa2.status IS NULL OR fa2.status != 'cancelled'
-    ) fa ON LOWER(TRIM(fa.teacher_name)) = LOWER(TRIM(pt.name))
-         AND fa.semester_id = pt.semester_id
     WHERE pt.semester_id = ?
     ORDER BY
       CASE COALESCE(pt.status,'pending')
