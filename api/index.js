@@ -1398,6 +1398,83 @@ app.get('/api/query/availability/:date', asyncHandler(async (req, res) => {
   });
 }));
 
+// GET /api/query/staff-schedule?staff_name=rubi&year=YYYY&month=MM
+// Or with start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
+app.get('/api/query/staff-schedule', asyncHandler(async (req, res) => {
+  await new Promise((resolve, reject) => requireApiKey(req, res, (err) => err ? reject(err) : resolve()));
+  if (res.headersSent) return;
+
+  const { staff_name, start_date, end_date, year, month } = req.query;
+
+  let dateFilter = '';
+  const params = [];
+
+  if (start_date && end_date) {
+    dateFilter = 'rs.session_date >= ? AND rs.session_date <= ?';
+    params.push(start_date, end_date);
+  } else {
+    const y = parseInt(year || new Date().getFullYear());
+    const m = parseInt(month || (new Date().getMonth() + 1));
+    dateFilter = 'EXTRACT(YEAR FROM rs.session_date) = ? AND EXTRACT(MONTH FROM rs.session_date) = ?';
+    params.push(y, m);
+  }
+
+  let query = `
+    SELECT 
+      rs.session_date as date, 
+      rs.start_time, 
+      rs.end_time, 
+      rs.is_displacement,
+      u1.name as staff_1_name, 
+      u2.name as staff_2_name, 
+      u3.name as staff_3_name, 
+      u4.name as staff_4_name,
+      fa.teacher_name,
+      fa.sede,
+      s.name as subject_name
+    FROM recording_sessions rs
+    LEFT JOIN filming_assignments fa ON fa.id = rs.assignment_id
+    LEFT JOIN subjects s ON s.id = fa.subject_id
+    LEFT JOIN users u1 ON rs.staff_1_id = u1.id
+    LEFT JOIN users u2 ON rs.staff_2_id = u2.id
+    LEFT JOIN users u3 ON rs.staff_3_id = u3.id
+    LEFT JOIN users u4 ON rs.staff_4_id = u4.id
+    WHERE ${dateFilter} AND (rs.status IS NULL OR rs.status != 'cancelled')
+  `;
+
+  if (staff_name) {
+    query += ` AND (u1.name LIKE ? OR u2.name LIKE ? OR u3.name LIKE ? OR u4.name LIKE ?)`;
+    const search = \`%\${staff_name}%\`;
+    params.push(search, search, search, search);
+  }
+
+  query += ' ORDER BY rs.session_date ASC, rs.start_time ASC';
+
+  const sessions = await queryAll(query, params);
+
+  const schedule = sessions.map(s => {
+    const assigned_staff = [s.staff_1_name, s.staff_2_name, s.staff_3_name, s.staff_4_name].filter(Boolean);
+    return {
+      date: s.date,
+      start_time: s.start_time ? s.start_time.substring(0, 5) : null,
+      end_time: s.end_time ? s.end_time.substring(0, 5) : null,
+      is_displacement: Boolean(s.is_displacement),
+      assigned_staff: assigned_staff,
+      details: {
+        teacher: s.teacher_name,
+        subject: s.subject_name,
+        sede: s.sede
+      }
+    };
+  });
+
+  res.json({
+    filters: { start_date, end_date, year, month, staff_name },
+    count: schedule.length,
+    schedule: schedule
+  });
+}));
+
 // GET /api/admin/staff-report — participation count per user (recording_sessions + reservations)
 app.get('/api/admin/staff-report', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);

@@ -5,6 +5,25 @@ Este documento explica cómo interpretar la respuesta JSON de la API de Consulta
 
 ---
 
+CÓMO USAR LA API
+----------------
+
+**Endpoint base:** `https://calendario.unifranz.online`
+
+**Disponibilidad Mensual:**
+`GET /api/query/availability?year=2026&month=7`
+
+**Disponibilidad por Rango:**
+`GET /api/query/availability/range?start_date=2026-07-01&end_date=2026-07-31`
+
+**Un Día Específico:**
+`GET /api/query/availability/2026-07-15`
+
+**Autenticación (header HTTP):**
+`Authorization: Bearer 4a91b20dd62bb6e5835b9a521cb45f06a0008a9173a8efad6be143fa8de9d6b1de555c1da9088d69`
+
+---
+
 ESTRUCTURA GENERAL DEL JSON
 --------------------------
 
@@ -108,3 +127,64 @@ RECOMENDACIONES PARA EL DESARROLLADOR DEL OTRO SISTEMA
 
 2. **Validar antes de Reservar:**
    - Cuando el usuario elija una fecha y hora, comprueba que la hora seleccionada esté contenida dentro de los bloques descritos en `"free_slots"` para ese día en el JSON.
+
+---
+
+NUEVO ENDPOINT: CONSULTA DE HORARIOS DE STAFF
+---------------------------------------------
+
+El API que acabo de crear es `/api/query/staff-schedule`.
+
+Para integrarlo en tu otro sistema y consultar qué días tiene grabación Rubi, debes hacer una petición HTTP GET. Dado que es un endpoint de consulta externo, requiere la API Key del sistema (puedes enviarla en la cabecera Authorization o en la URL).
+
+Aquí tienes un ejemplo práctico de cómo integrarlo usando JavaScript (con fetch):
+
+```javascript
+async function consultarHorariosStaff(nombreStaff) {
+  // Construyes la URL. Agregamos staff_name=rubi
+  // Opcional: puedes agregar &year=2026&month=7 para buscar por mes, 
+  // o &start_date=2026-07-01&end_date=2026-07-31 para buscar por rango.
+  const url = `/api/query/staff-schedule?staff_name=${nombreStaff}`;
+  
+  // Tu API KEY de acceso a la plataforma (la que se genera desde los Ajustes del sistema)
+  const API_KEY = "TU_API_KEY_SECRETA_AQUI";
+  try {
+    const respuesta = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}` // Mandamos la llave de acceso
+      }
+    });
+    if (!respuesta.ok) {
+      throw new Error(`Error HTTP: ${respuesta.status}`);
+    }
+    const datos = await respuesta.json();
+    
+    // Aquí puedes ver los resultados
+    console.log(`Encontradas ${datos.count} filmaciones para ${nombreStaff}`);
+    
+    // Recorrer la lista de días para mostrarlos en pantalla
+    datos.schedule.forEach(sesion => {
+      console.log(`- Día: ${sesion.date}`);
+      console.log(`- Horario: ${sesion.start_time} a ${sesion.end_time}`);
+      console.log(`- Asignados: ${sesion.assigned_staff.join(', ')}`);
+      console.log(`- Materia: ${sesion.details.subject}`);
+      console.log('---');
+    });
+    return datos.schedule;
+    
+  } catch (error) {
+    console.error("Error al consultar el horario del staff:", error);
+  }
+}
+// Para ejecutar la consulta:
+consultarHorariosStaff("rubi");
+```
+
+### Otra forma de integrarlo (con `?api_key`)
+Si el sistema que estás usando no te permite enviar cabeceras HTTP (Headers), también puedes enviar la llave directamente en la URL así:
+
+`https://tudominio.com/api/query/staff-schedule?staff_name=rubi&api_key=TU_API_KEY_SECRETA_AQUI`
+
+Una vez que tengas la respuesta, el campo principal que te interesa procesar para dibujar la UI es el array `datos.schedule`, que contiene la lista exacta de las sesiones donde ese staff está asignado.
