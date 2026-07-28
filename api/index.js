@@ -1444,7 +1444,7 @@ app.get('/api/query/staff-schedule', asyncHandler(async (req, res) => {
 
   if (staff_name) {
     query += ` AND (u1.name LIKE ? OR u2.name LIKE ? OR u3.name LIKE ? OR u4.name LIKE ?)`;
-    const search = \`%\${staff_name}%\`;
+    const search = `%${staff_name}%`;
     params.push(search, search, search, search);
   }
 
