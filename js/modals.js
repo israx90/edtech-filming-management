@@ -2196,8 +2196,7 @@ const Modals = {
             const holidayName = (typeof Calendar !== 'undefined' && Calendar.HOLIDAYS)
                 ? (Calendar.HOLIDAYS[dateStr] || Calendar.HOLIDAYS[monthDay] || null)
                 : null;
-            const bypassHoliday = document.getElementById('input-assign-bypass-holiday')?.checked;
-            const isBlocked = isPast || isWeekend || (!!holidayName && !bypassHoliday) || status === 'full';
+            const isBlocked = isPast || isWeekend || status === 'full';
 
             const cell = document.createElement('div');
             cell.style.cssText = `
@@ -2253,6 +2252,9 @@ const Modals = {
                     cell.style.transform = 'scale(1)'; cell.style.zIndex = '';
                 });
                 cell.addEventListener('click', () => {
+                    if (holidayName && typeof showToast === 'function') {
+                        showToast(`Estás agendando en un feriado: ${holidayName}`, 'warning');
+                    }
                     document.getElementById('input-session-date').value = dateStr;
 
                     // Update selected display
@@ -2330,9 +2332,8 @@ const Modals = {
                 ? (Calendar.HOLIDAYS[dateStr] || Calendar.HOLIDAYS[monthDay] || null)
                 : null;
 
-            const bypassHoliday = document.getElementById('input-new-session-bypass-holiday')?.checked;
-            // A day is non-selectable if: past, weekend, holiday, or fully booked
-            const isBlocked = isPast || isWeekend || (!!holidayName && !bypassHoliday) || status === 'full';
+            // A day is non-selectable if: past, weekend, or fully booked
+            const isBlocked = isPast || isWeekend || status === 'full';
 
             const cell = document.createElement('div');
             cell.style.cssText = `
@@ -2398,6 +2399,9 @@ const Modals = {
                     cell.style.zIndex = '';
                 });
                 cell.addEventListener('click', () => {
+                    if (holidayName && typeof showToast === 'function') {
+                        showToast(`Estás agendando en un feriado: ${holidayName}`, 'warning');
+                    }
                     document.getElementById('input-new-session-date').value = dateStr;
 
                     // Format display
