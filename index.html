@@ -931,6 +931,10 @@ PSI-220 Psicología General,Psicología"></textarea>
                             <span style="display:flex;align-items:center;gap:3px;"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:rgba(239,68,68,0.22);"></span>Lleno</span>
                         </div>
                         <div id="assign-cal-selected" style="display:none;margin-top:6px;font-size:10px;font-weight:600;padding:4px 6px;background:var(--bg-card);border-radius:5px;line-height:1.4;"></div>
+                        <div style="margin-top:8px; display:flex; align-items:center; gap:6px;">
+                            <input type="checkbox" id="input-assign-bypass-holiday" onchange="Modals._renderAssignCalendar()">
+                            <label for="input-assign-bypass-holiday" style="font-size:10px; color:var(--text-secondary); cursor:pointer;">Ignorar feriado</label>
+                        </div>
                     </div>
                 </div>
                 <!-- RIGHT: Controls stacked -->
@@ -1087,6 +1091,10 @@ PSI-220 Psicología General,Psicología"></textarea>
                     <span class="avail-legend-item"><span class="avail-dot" style="background:linear-gradient(to right,rgba(34,197,94,0.6) 50%,rgba(245,158,11,0.7) 50%);"></span>Tarde ocupada</span>
                     <span class="avail-legend-item"><span class="avail-dot" style="background:rgba(239,68,68,0.6);"></span>Lleno</span>
                     <span class="avail-legend-item"><span class="avail-dot" style="background:rgba(245,158,11,0.5);"></span>Feriado</span>
+                </div>
+                <div style="margin-top:12px; display:flex; align-items:center; gap:8px; padding:0 4px;">
+                    <input type="checkbox" id="input-new-session-bypass-holiday" onchange="Modals._renderAvailCalendar()">
+                    <label for="input-new-session-bypass-holiday" style="font-size:12px; color:var(--text-secondary); cursor:pointer;">Ignorar feriado (permitir agendar)</label>
                 </div>
             </div>
 

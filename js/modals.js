@@ -2196,7 +2196,8 @@ const Modals = {
             const holidayName = (typeof Calendar !== 'undefined' && Calendar.HOLIDAYS)
                 ? (Calendar.HOLIDAYS[dateStr] || Calendar.HOLIDAYS[monthDay] || null)
                 : null;
-            const isBlocked = isPast || isWeekend || !!holidayName || status === 'full';
+            const bypassHoliday = document.getElementById('input-assign-bypass-holiday')?.checked;
+            const isBlocked = isPast || isWeekend || (!!holidayName && !bypassHoliday) || status === 'full';
 
             const cell = document.createElement('div');
             cell.style.cssText = `
@@ -2329,8 +2330,9 @@ const Modals = {
                 ? (Calendar.HOLIDAYS[dateStr] || Calendar.HOLIDAYS[monthDay] || null)
                 : null;
 
+            const bypassHoliday = document.getElementById('input-new-session-bypass-holiday')?.checked;
             // A day is non-selectable if: past, weekend, holiday, or fully booked
-            const isBlocked = isPast || isWeekend || !!holidayName || status === 'full';
+            const isBlocked = isPast || isWeekend || (!!holidayName && !bypassHoliday) || status === 'full';
 
             const cell = document.createElement('div');
             cell.style.cssText = `
