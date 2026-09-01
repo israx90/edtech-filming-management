@@ -305,9 +305,9 @@ const PendingTeachers = {
                 if (canManage && (status === 'pending' || status === 'contacted')) actionsHtml += `<button class="btn-sm btn-success" onclick="PendingTeachers.scheduleFromAgenda(${t.id})" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Agendar</button>`;
                 if (canViewComments) actionsHtml += `<button class="btn-sm btn-outline pt-comment-btn" data-id="${t.id}" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Notas</button>`;
                 if (canEdit && t.sede !== 'La Paz' && t.sede !== 'El Alto' && !t.flight_ticket_path) actionsHtml += `<button class="btn-sm pt-attach-btn" data-id="${t.id}" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);color:#a78bfa;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;" title="Adjuntar pasaje en PDF"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>Adjuntar Pasaje</button>`;
-            // Batch label selector — only for filmed teachers, canManage
+            // Batch label selector — for all teachers (canManage)
             const BATCH_OPTIONS = ['Sin Lote', 'LOTE 1', 'LOTE 2', 'LOTE 3', 'LOTE 4'];
-            if (canManage && t.assignment_status === 'completed') {
+            if (canManage) {
                 const currentBatch = t.batch_label || 'Sin Lote';
                 const batchColor = currentBatch === 'Sin Lote' ? '#6b7280' : '#34d399';
                 const batchBg = currentBatch === 'Sin Lote' ? 'rgba(107,114,128,0.1)' : 'rgba(52,211,153,0.12)';
