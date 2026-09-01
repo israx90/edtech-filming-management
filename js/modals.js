@@ -930,11 +930,17 @@ const Modals = {
         let flight_ticket_path = null;
         const ticketFile = document.getElementById('input-flight-ticket').files[0];
         if (ticketFile) {
-            const formData = new FormData();
-            formData.append('file', ticketFile);
-            const uploadRes = await fetch(`/api/uploads/ticket?token=${encodeURIComponent(localStorage.getItem('edtech_token'))}`, {
+            const data_base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(ticketFile);
+            });
+            const token = localStorage.getItem('edtech_token') || '';
+            const uploadRes = await fetch(`/api/uploads/ticket?token=${encodeURIComponent(token)}`, {
                 method: 'POST',
-                body: formData
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data_base64, filename: ticketFile.name })
             }).then(r => r.json()).catch(() => ({ error: 'Fallo al subir el archivo' }));
             
             if (uploadRes.error) return showToast(uploadRes.error, 'error');

@@ -291,6 +291,7 @@ const PendingTeachers = {
                 if (canManage) actionsHtml += `<select class="input select pt-status-select" data-id="${t.id}" style="font-size:11px;padding:3px 8px;height:28px;" title="Cambiar estado"><option value="pending" ${status==='pending'?'selected':''}>Pendiente</option><option value="contacted" ${status==='contacted'?'selected':''}>Contactado</option><option value="scheduled" ${status==='scheduled'?'selected':''}>Agendado</option><option value="unavailable" ${status==='unavailable'?'selected':''}>No Disponible</option><option value="guion_revisado" ${status==='guion_revisado'?'selected':''}>Guión Terminado</option><option value="guion_incompleto" ${status==='guion_incompleto'?'selected':''}>Guión Incompleto</option></select>`;
                 if (canManage && (status === 'pending' || status === 'contacted')) actionsHtml += `<button class="btn-sm btn-success" onclick="PendingTeachers.scheduleFromAgenda(${t.id})" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Agendar</button>`;
                 if (canViewComments) actionsHtml += `<button class="btn-sm btn-outline pt-comment-btn" data-id="${t.id}" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Notas</button>`;
+                if (canEdit) actionsHtml += `<button class="btn-sm pt-attach-btn" data-id="${t.id}" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);color:#a78bfa;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;" title="Adjuntar pasaje en PDF"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>Adjuntar PDF</button>`;
                 if (canEdit) actionsHtml += `<button class="btn-icon" onclick="PendingTeachers.editTeacher(${t.id})" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>`;
                 if (canManage) actionsHtml += `<button class="btn-icon" onclick="PendingTeachers.deleteTeacher(${t.id})" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`;
                 actionsHtml += `</div>`;
@@ -315,7 +316,8 @@ const PendingTeachers = {
                 </div>
                 ${t.notes ? `<div class="pt-notes">${t.notes}</div>` : ''}
                 <div class="pt-date">${t.added_by_name ? `<span class="pt-added-by">Añadido por <strong>${t.added_by_name}</strong> · </span>` : ''}${dateCreated}</div>
-                ${(t.drive_link || t.flight_ticket_path) ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">${t.drive_link ? `<div class="pt-drive-link" style="margin-top:0;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg><a href="${t.drive_link}" target="_blank" rel="noopener" class="pt-drive-anchor">Ver Guiones en Drive</a></div>` : ''}${t.flight_ticket_path ? `<div style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:6px 10px;border-radius:6px;background:var(--purple-bg);border:1px solid rgba(188,140,255,0.2);color:var(--purple);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><a href="/api${t.flight_ticket_path}" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">Ver Pasaje</a></div>` : ''}</div>` : ''}
+                ${(t.drive_link || t.flight_ticket_path) ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">${t.drive_link ? `<div class="pt-drive-link" style="margin-top:0;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg><a href="${t.drive_link}" target="_blank" rel="noopener" class="pt-drive-anchor">Ver Guiones en Drive</a></div>` : ''}${t.flight_ticket_path ? `<div style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:6px 10px;border-radius:6px;background:var(--purple-bg);border:1px solid rgba(188,140,255,0.2);color:var(--purple);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><a href="/api${t.flight_ticket_path}?token=${encodeURIComponent(localStorage.getItem('edtech_token')||'')}" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">Ver Pasaje</a></div>` : ''}</div>` : ''}
+                <input type="file" accept="application/pdf" class="pt-ticket-file-input" data-id="${t.id}" style="display:none;">
                 <div class="pt-comment-panel" id="comment-panel-${t.id}" style="display:none;"></div>
             </div>`;
         }; // end buildCard
@@ -367,6 +369,66 @@ const PendingTeachers = {
                 this.toggleCommentPanel(id);
             });
         });
+
+        // Bind PDF attach buttons
+        list.querySelectorAll('.pt-attach-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = +btn.dataset.id;
+                const input = list.querySelector(`.pt-ticket-file-input[data-id="${id}"]`);
+                if (input) input.click();
+            });
+        });
+
+        // Bind hidden file inputs for ticket upload
+        list.querySelectorAll('.pt-ticket-file-input').forEach(input => {
+            input.addEventListener('change', async () => {
+                const id = +input.dataset.id;
+                const file = input.files[0];
+                if (!file) return;
+                await PendingTeachers.uploadTicketForCard(id, file, input);
+            });
+        });
+    },
+
+    async uploadTicketForCard(id, file, inputEl) {
+        // Show loading state on the button
+        const btn = document.querySelector(`.pt-attach-btn[data-id="${id}"]`);
+        const originalHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0"/></svg>Subiendo…`;
+        }
+        try {
+            // Read file as base64
+            const data_base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+            // Upload to API
+            const token = localStorage.getItem('edtech_token') || '';
+            const uploadRes = await fetch(`/api/uploads/ticket?token=${encodeURIComponent(token)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data_base64, filename: file.name, entity_type: 'pending_teacher', entity_id: id })
+            }).then(r => r.json()).catch(() => ({ error: 'Error de red al subir el archivo' }));
+            if (uploadRes.error) {
+                showToast(uploadRes.error, 'error');
+                return;
+            }
+            // Update the pending teacher record with the new path
+            await API.put(`/pending-teachers/${id}`, { flight_ticket_path: uploadRes.path });
+            showToast('Pasaje adjuntado correctamente ✓', 'success');
+            // Reset the input and refresh
+            if (inputEl) inputEl.value = '';
+            this.refresh();
+        } catch (err) {
+            showToast('Error al subir el archivo', 'error');
+            console.error('[uploadTicketForCard]', err);
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+        }
     },
 
     async changeStatus(id, newStatus) {
@@ -486,11 +548,17 @@ const PendingTeachers = {
         let flight_ticket_path = document.getElementById('input-pt-flight-ticket-path').value || null;
         const ticketFile = document.getElementById('input-pt-flight-ticket').files[0];
         if (ticketFile) {
-            const formData = new FormData();
-            formData.append('file', ticketFile);
-            const uploadRes = await fetch(`/api/uploads/ticket?token=${encodeURIComponent(localStorage.getItem('edtech_token'))}`, {
+            const data_base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(ticketFile);
+            });
+            const token = localStorage.getItem('edtech_token') || '';
+            const uploadRes = await fetch(`/api/uploads/ticket?token=${encodeURIComponent(token)}`, {
                 method: 'POST',
-                body: formData
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data_base64, filename: ticketFile.name })
             }).then(r => r.json()).catch(() => ({ error: 'Fallo al subir el archivo' }));
             
             if (uploadRes.error) return showToast(uploadRes.error, 'error');

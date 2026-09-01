@@ -7,7 +7,7 @@ const { getAuthUser, requireAuth, requireAdmin, getToken, extractCodeAndName } =
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));
 
 // Serve static files from root (favicon, html, css, js)
 const path = require('path');
@@ -133,6 +133,23 @@ const asyncHandler = fn => (req, res, next) => {
     `);
     console.log('[Migration] activity_log table ready.');
   } catch (e) { console.error('[Migration] activity_log table:', e.message); }
+
+  // Create file_uploads table for storing PDFs (tickets, etc.)
+  try {
+    await execute(`
+      CREATE TABLE IF NOT EXISTS file_uploads (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        entity_type  VARCHAR(50) NOT NULL DEFAULT 'ticket',
+        entity_id    INT DEFAULT NULL,
+        filename     VARCHAR(255) NOT NULL,
+        mime_type    VARCHAR(100) NOT NULL DEFAULT 'application/pdf',
+        file_data    MEDIUMBLOB NOT NULL,
+        uploaded_by  INT DEFAULT NULL,
+        created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('[Migration] file_uploads table ready.');
+  } catch (e) { console.error('[Migration] file_uploads table:', e.message); }
 })();
 
 // --- HEALTH CHECK (diagnóstico) ---
@@ -942,6 +959,37 @@ app.delete('/api/pending-teachers/:id', asyncHandler(async (req, res) => {
   if (!requireAuth(user, res)) return;
   await execute('DELETE FROM pending_teachers WHERE id = ?', [parseInt(req.params.id)]);
   res.json({ success: true });
+}));
+
+// --- FILE UPLOADS (pasajes / tickets PDF) ---
+// POST /api/uploads/ticket  — recibe { data_base64, filename, entity_type?, entity_id? }
+app.post('/api/uploads/ticket', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAuth(user, res)) return;
+  const { data_base64, filename, entity_type = 'ticket', entity_id = null } = req.body;
+  if (!data_base64 || !filename) return res.status(400).json({ error: 'data_base64 y filename son requeridos' });
+  // Strip data URL prefix if present (data:application/pdf;base64,...)
+  const base64Data = data_base64.replace(/^data:[^;]+;base64,/, '');
+  const buffer = Buffer.from(base64Data, 'base64');
+  if (buffer.length > 10 * 1024 * 1024) return res.status(413).json({ error: 'El archivo no puede superar 10 MB' });
+  const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const id = await execute(
+    'INSERT INTO file_uploads (entity_type, entity_id, filename, mime_type, file_data, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)',
+    [entity_type, entity_id ?? null, safeFilename, 'application/pdf', buffer, user.id]
+  );
+  res.status(201).json({ path: `/uploads/ticket/${id}`, filename: safeFilename, id });
+}));
+
+// GET /api/uploads/ticket/:id  — sirve el PDF almacenado
+app.get('/api/uploads/ticket/:id', asyncHandler(async (req, res) => {
+  const user = await getAuthUser(req);
+  if (!requireAuth(user, res)) return;
+  const id = parseInt(req.params.id);
+  const row = await queryOne('SELECT filename, mime_type, file_data FROM file_uploads WHERE id = ?', [id]);
+  if (!row) return res.status(404).json({ error: 'Archivo no encontrado' });
+  res.setHeader('Content-Type', row.mime_type || 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${row.filename}"`);
+  res.send(row.file_data);
 }));
 
 // --- GLOBAL SUBJECTS ---
