@@ -811,9 +811,9 @@ input[type="time"]:hover { background-image: url("data:image/svg+xml,%3Csvg xmln
 .pt-phone-link:hover { color: var(--accent); text-decoration: underline; }
 .pt-no-phone { color: var(--text-muted); font-style: italic; }
 
-.pt-actions { display: flex; gap: 4px; width: 100%; margin-top: 8px; justify-content: flex-end; }
+.pt-actions { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; margin-top: 8px; justify-content: flex-end; }
 .pt-actions .btn-icon { width: 30px; height: 30px; }
-.pt-actions .pt-status-select { flex: 1; min-width: 0; }
+.pt-actions .pt-status-select { flex: 1 1 120px; min-width: 120px; }
 
 .pt-btn-resolve { color: var(--green) !important; }
 .pt-btn-resolve:hover { background: var(--green-bg) !important; }

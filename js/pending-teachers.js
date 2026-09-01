@@ -303,7 +303,7 @@ const PendingTeachers = {
                 const currentBatch = t.batch_label || 'Sin Lote';
                 const batchColor = currentBatch === 'Sin Lote' ? '#6b7280' : '#34d399';
                 const batchBg = currentBatch === 'Sin Lote' ? 'rgba(107,114,128,0.1)' : 'rgba(52,211,153,0.12)';
-                actionsHtml += `<select class="pt-batch-select" data-id="${t.id}" title="Asignar lote" style="font-size:11px;padding:3px 8px;height:28px;background:${batchBg};border:1px solid ${batchColor}33;color:${batchColor};border-radius:5px;cursor:pointer;font-weight:600;">`;
+                actionsHtml += `<select class="pt-batch-select" data-id="${t.id}" title="Asignar lote" style="font-size:11px;padding:3px 8px;height:28px;background:${batchBg};border:1px solid ${batchColor}33;color:${batchColor};border-radius:5px;cursor:pointer;font-weight:600;flex-shrink:0;">`;
                 BATCH_OPTIONS.forEach(opt => {
                     actionsHtml += `<option value="${opt === 'Sin Lote' ? '' : opt}" ${(t.batch_label || '') === (opt === 'Sin Lote' ? '' : opt) ? 'selected' : ''}>${opt}</option>`;
                 });
