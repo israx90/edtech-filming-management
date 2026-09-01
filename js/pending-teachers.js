@@ -92,10 +92,18 @@ const PendingTeachers = {
             this.searchQuery = e.target.value.trim();
             this.render();
         });
+
+        // Batch filter checkboxes → re-render on change
+        document.querySelectorAll('.pt-batch-chk').forEach(chk => {
+            chk.addEventListener('change', () => this.render());
+        });
     },
 
     setFilter(filter) {
         this.activeFilter = filter;
+        // Show/hide the batch filter panel
+        const batchPanel = document.getElementById('pt-batch-filter');
+        if (batchPanel) batchPanel.style.display = filter === 'terminados' ? 'flex' : 'none';
         // Update tab UI
         document.querySelectorAll('#pt-filter-tabs .admin-tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelector(`#pt-filter-tabs [data-filter="${filter}"]`)?.classList.add('active');
@@ -341,6 +349,11 @@ const PendingTeachers = {
 
         // ── When "Filmación Terminada": group by batch (lote) with collapsible headers ──
         if (this.activeFilter === 'terminados') {
+            // Collect which batches are checked (visible)
+            const checkedBatches = new Set(
+                [...document.querySelectorAll('.pt-batch-chk:checked')].map(c => c.value)
+            );
+
             const BATCH_ORDER = ['LOTE 1', 'LOTE 2', 'LOTE 3', 'LOTE 4', ''];
             const batches = {};
             for (const t of teachers) {
@@ -350,6 +363,8 @@ const PendingTeachers = {
             }
             for (const batchKey of BATCH_ORDER) {
                 if (!batches[batchKey] || batches[batchKey].length === 0) continue;
+                // Skip if this batch is unchecked
+                if (!checkedBatches.has(batchKey)) continue;
                 const label = batchKey || 'Sin Lote';
                 const isCollapsed = !!this.batchCollapsed[batchKey || '__sin_lote'];
                 const colKey = batchKey || '__sin_lote';
@@ -558,11 +573,17 @@ const PendingTeachers = {
         const phone = document.getElementById('qa-phone').value.trim();
         const sede = document.getElementById('qa-sede').value;
         const is_external = (sede !== 'La Paz' && sede !== 'El Alto');
+        const batch_label = document.getElementById('qa-batch')?.value || null;
 
         if (!name || !subject) return showToast('Nombre y materia son requeridos', 'error');
 
         const result = await API.post('/pending-teachers', { name, subject, subject_code, subject_type, phone, sede, is_external });
         if (result.error) return showToast(result.error, 'error');
+
+        // If a batch was selected, immediately assign it
+        if (batch_label && result.id) {
+            await API.put(`/pending-teachers/${result.id}`, { batch_label });
+        }
 
         // Clear fields
         document.getElementById('qa-name').value = '';
@@ -570,8 +591,10 @@ const PendingTeachers = {
         document.getElementById('qa-subject-type').value = 'Teórica';
         document.getElementById('qa-phone').value = '';
         document.getElementById('qa-sede').value = 'La Paz';
+        const qaBatch = document.getElementById('qa-batch');
+        if (qaBatch) qaBatch.value = '';
 
-        showToast(`Docente "${name}" agregado`, 'success');
+        showToast(`Docente "${name}" agregado${batch_label ? ' → ' + batch_label : ''}`, 'success');
         this.refresh();
     },
 
