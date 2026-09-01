@@ -291,7 +291,7 @@ const PendingTeachers = {
                 if (canManage) actionsHtml += `<select class="input select pt-status-select" data-id="${t.id}" style="font-size:11px;padding:3px 8px;height:28px;" title="Cambiar estado"><option value="pending" ${status==='pending'?'selected':''}>Pendiente</option><option value="contacted" ${status==='contacted'?'selected':''}>Contactado</option><option value="scheduled" ${status==='scheduled'?'selected':''}>Agendado</option><option value="unavailable" ${status==='unavailable'?'selected':''}>No Disponible</option><option value="guion_revisado" ${status==='guion_revisado'?'selected':''}>Guión Terminado</option><option value="guion_incompleto" ${status==='guion_incompleto'?'selected':''}>Guión Incompleto</option></select>`;
                 if (canManage && (status === 'pending' || status === 'contacted')) actionsHtml += `<button class="btn-sm btn-success" onclick="PendingTeachers.scheduleFromAgenda(${t.id})" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Agendar</button>`;
                 if (canViewComments) actionsHtml += `<button class="btn-sm btn-outline pt-comment-btn" data-id="${t.id}" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Notas</button>`;
-                if (canEdit && t.sede !== 'La Paz' && t.sede !== 'El Alto') actionsHtml += `<button class="btn-sm pt-attach-btn" data-id="${t.id}" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);color:#a78bfa;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;" title="Adjuntar pasaje en PDF"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>Adjuntar Pasaje</button>`;
+                if (canEdit && t.sede !== 'La Paz' && t.sede !== 'El Alto' && !t.flight_ticket_path) actionsHtml += `<button class="btn-sm pt-attach-btn" data-id="${t.id}" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);color:#a78bfa;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;" title="Adjuntar pasaje en PDF"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>Adjuntar Pasaje</button>`;
                 if (canEdit) actionsHtml += `<button class="btn-icon" onclick="PendingTeachers.editTeacher(${t.id})" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>`;
                 if (canManage) actionsHtml += `<button class="btn-icon" onclick="PendingTeachers.deleteTeacher(${t.id})" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`;
                 actionsHtml += `</div>`;
@@ -316,7 +316,7 @@ const PendingTeachers = {
                 </div>
                 ${t.notes ? `<div class="pt-notes">${t.notes}</div>` : ''}
                 <div class="pt-date">${t.added_by_name ? `<span class="pt-added-by">Añadido por <strong>${t.added_by_name}</strong> · </span>` : ''}${dateCreated}</div>
-                ${(t.drive_link || t.flight_ticket_path) ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">${t.drive_link ? `<div class="pt-drive-link" style="margin-top:0;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg><a href="${t.drive_link}" target="_blank" rel="noopener" class="pt-drive-anchor">Ver Guiones en Drive</a></div>` : ''}${t.flight_ticket_path ? `<div style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:6px 10px;border-radius:6px;background:var(--purple-bg);border:1px solid rgba(188,140,255,0.2);color:var(--purple);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><a href="/api${t.flight_ticket_path}?token=${encodeURIComponent(localStorage.getItem('edtech_token')||'')}" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">Ver Pasaje</a></div>` : ''}</div>` : ''}
+                ${(t.drive_link || t.flight_ticket_path) ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center;">${t.drive_link ? `<div class="pt-drive-link" style="margin-top:0;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg><a href="${t.drive_link}" target="_blank" rel="noopener" class="pt-drive-anchor">Ver Guiones en Drive</a></div>` : ''}${t.flight_ticket_path ? `<div style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:6px 10px;border-radius:6px;background:var(--purple-bg);border:1px solid rgba(188,140,255,0.2);color:var(--purple);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><a href="/api${t.flight_ticket_path}?token=${encodeURIComponent(localStorage.getItem('edtech_token')||'')}" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">Ver Pasaje</a></div>${canEdit ? `<button class="btn-sm pt-attach-btn" data-id="${t.id}" style="gap:4px;font-size:11px;padding:3px 8px;height:26px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);color:#a78bfa;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;" title="Reemplazar pasaje"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>Reemplazar</button><button class="pt-remove-ticket-btn" data-id="${t.id}" style="gap:4px;font-size:11px;padding:3px 8px;height:26px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);color:#f87171;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;" title="Eliminar pasaje adjunto"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Eliminar</button>` : ''}</div>` : ''}</div>` : ''}
                 <input type="file" accept="application/pdf" class="pt-ticket-file-input" data-id="${t.id}" style="display:none;">
                 <div class="pt-comment-panel" id="comment-panel-${t.id}" style="display:none;"></div>
             </div>`;
@@ -370,12 +370,20 @@ const PendingTeachers = {
             });
         });
 
-        // Bind PDF attach buttons
+        // Bind PDF attach buttons (Adjuntar / Reemplazar)
         list.querySelectorAll('.pt-attach-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const id = +btn.dataset.id;
                 const input = list.querySelector(`.pt-ticket-file-input[data-id="${id}"]`);
                 if (input) input.click();
+            });
+        });
+
+        // Bind remove ticket buttons
+        list.querySelectorAll('.pt-remove-ticket-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = +btn.dataset.id;
+                PendingTeachers.removeTicketForCard(id);
             });
         });
 
@@ -429,6 +437,18 @@ const PendingTeachers = {
         } finally {
             if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
         }
+    },
+
+    async removeTicketForCard(id) {
+        const t = this.teachers.find(x => x.id === id);
+        Calendar.showConfirm({
+            title: 'Eliminar Pasaje',
+            message: `¿Eliminar el pasaje adjunto de "${t?.name || 'este docente'}"?`
+        }, async () => {
+            await API.put(`/pending-teachers/${id}`, { flight_ticket_path: null });
+            showToast('Pasaje eliminado', 'success');
+            this.refresh();
+        });
     },
 
     async changeStatus(id, newStatus) {
