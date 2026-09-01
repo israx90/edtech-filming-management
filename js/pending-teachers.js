@@ -101,9 +101,6 @@ const PendingTeachers = {
 
     setFilter(filter) {
         this.activeFilter = filter;
-        // Show/hide the batch filter panel
-        const batchPanel = document.getElementById('pt-batch-filter');
-        if (batchPanel) batchPanel.style.display = filter === 'terminados' ? 'flex' : 'none';
         // Update tab UI
         document.querySelectorAll('#pt-filter-tabs .admin-tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelector(`#pt-filter-tabs [data-filter="${filter}"]`)?.classList.add('active');
@@ -210,7 +207,12 @@ const PendingTeachers = {
 
     render() {
         const list = document.getElementById('pending-list');
-        const allTeachers = this.teachers;
+        
+        // F2.5: Batch filter — applies globally to all tabs and counts
+        const checkedBatches = new Set(
+            [...document.querySelectorAll('.pt-batch-chk:checked')].map(c => c.value)
+        );
+        const allTeachers = this.teachers.filter(t => checkedBatches.has(t.batch_label || ''));
 
         // Helper: a teacher is "terminado" if their filming assignment is completed
         // Uses assignment_status from the DB join (correlated subquery via subjects)
@@ -349,11 +351,6 @@ const PendingTeachers = {
 
         // ── When "Filmación Terminada": group by batch (lote) with collapsible headers ──
         if (this.activeFilter === 'terminados') {
-            // Collect which batches are checked (visible)
-            const checkedBatches = new Set(
-                [...document.querySelectorAll('.pt-batch-chk:checked')].map(c => c.value)
-            );
-
             const BATCH_ORDER = ['LOTE 1', 'LOTE 2', 'LOTE 3', 'LOTE 4', ''];
             const batches = {};
             for (const t of teachers) {
@@ -363,8 +360,6 @@ const PendingTeachers = {
             }
             for (const batchKey of BATCH_ORDER) {
                 if (!batches[batchKey] || batches[batchKey].length === 0) continue;
-                // Skip if this batch is unchecked
-                if (!checkedBatches.has(batchKey)) continue;
                 const label = batchKey || 'Sin Lote';
                 const isCollapsed = !!this.batchCollapsed[batchKey || '__sin_lote'];
                 const colKey = batchKey || '__sin_lote';
