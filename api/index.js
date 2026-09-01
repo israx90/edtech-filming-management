@@ -150,6 +150,15 @@ const asyncHandler = fn => (req, res, next) => {
     `);
     console.log('[Migration] file_uploads table ready.');
   } catch (e) { console.error('[Migration] file_uploads table:', e.message); }
+
+  // Add batch_label column to pending_teachers (for lot grouping in Filmación Terminada)
+  try {
+    const [cols] = await require('../src/db').getPool().execute("SHOW COLUMNS FROM pending_teachers LIKE 'batch_label'");
+    if (cols.length === 0) {
+      await execute("ALTER TABLE pending_teachers ADD COLUMN batch_label VARCHAR(50) DEFAULT NULL");
+      console.log('[Migration] Added batch_label column to pending_teachers');
+    }
+  } catch (e) { console.error('[Migration] batch_label:', e.message); }
 })();
 
 // --- HEALTH CHECK (diagnóstico) ---
@@ -929,7 +938,7 @@ app.put('/api/pending-teachers/:id', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
   if (!requireAuth(user, res)) return;
   const id = parseInt(req.params.id);
-  let { name, subject_code, subject, subject_type, phone, sede, is_external, notes, drive_link, flight_ticket_path, resolved, status } = req.body;
+  let { name, subject_code, subject, subject_type, phone, sede, is_external, notes, drive_link, flight_ticket_path, resolved, status, batch_label } = req.body;
   if (subject !== undefined && subject_code === undefined) { const ext = extractCodeAndName(subject); subject_code = ext.code; subject = ext.name; }
   if (name !== undefined) await execute('UPDATE pending_teachers SET name = ? WHERE id = ?', [name, id]);
   if (subject_code !== undefined) await execute('UPDATE pending_teachers SET subject_code = ? WHERE id = ?', [subject_code, id]);
@@ -941,6 +950,7 @@ app.put('/api/pending-teachers/:id', asyncHandler(async (req, res) => {
   if (notes !== undefined) await execute('UPDATE pending_teachers SET notes = ? WHERE id = ?', [notes, id]);
   if (drive_link !== undefined) await execute('UPDATE pending_teachers SET drive_link = ? WHERE id = ?', [drive_link, id]);
   if (flight_ticket_path !== undefined) await execute('UPDATE pending_teachers SET flight_ticket_path = ? WHERE id = ?', [flight_ticket_path, id]);
+  if (batch_label !== undefined) await execute('UPDATE pending_teachers SET batch_label = ? WHERE id = ?', [batch_label ?? null, id]);
   if (resolved !== undefined) await execute('UPDATE pending_teachers SET resolved = ? WHERE id = ?', [!!resolved, id]);
   if (status !== undefined) {
     await execute('UPDATE pending_teachers SET status = ? WHERE id = ?', [status, id]);

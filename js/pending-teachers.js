@@ -40,6 +40,11 @@ const PendingTeachers = {
     activeFilter: 'all',
     searchQuery: '',
     editingId: null,
+    batchCollapsed: JSON.parse(localStorage.getItem('pt_batch_collapsed') || '{}'),
+
+    saveBatchCollapsed() {
+        localStorage.setItem('pt_batch_collapsed', JSON.stringify(this.batchCollapsed));
+    },
 
     checkFlightTicketVisibility() {
         const sede = document.getElementById('input-pt-sede').value;
@@ -292,9 +297,21 @@ const PendingTeachers = {
                 if (canManage && (status === 'pending' || status === 'contacted')) actionsHtml += `<button class="btn-sm btn-success" onclick="PendingTeachers.scheduleFromAgenda(${t.id})" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Agendar</button>`;
                 if (canViewComments) actionsHtml += `<button class="btn-sm btn-outline pt-comment-btn" data-id="${t.id}" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Notas</button>`;
                 if (canEdit && t.sede !== 'La Paz' && t.sede !== 'El Alto' && !t.flight_ticket_path) actionsHtml += `<button class="btn-sm pt-attach-btn" data-id="${t.id}" style="gap:4px;font-size:11px;padding:3px 10px;height:28px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);color:#a78bfa;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;" title="Adjuntar pasaje en PDF"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>Adjuntar Pasaje</button>`;
-                if (canEdit) actionsHtml += `<button class="btn-icon" onclick="PendingTeachers.editTeacher(${t.id})" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>`;
-                if (canManage) actionsHtml += `<button class="btn-icon" onclick="PendingTeachers.deleteTeacher(${t.id})" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`;
-                actionsHtml += `</div>`;
+            // Batch label selector — only for filmed teachers, canManage
+            const BATCH_OPTIONS = ['Sin Lote', 'LOTE 1', 'LOTE 2', 'LOTE 3', 'LOTE 4'];
+            if (canManage && t.assignment_status === 'completed') {
+                const currentBatch = t.batch_label || 'Sin Lote';
+                const batchColor = currentBatch === 'Sin Lote' ? '#6b7280' : '#34d399';
+                const batchBg = currentBatch === 'Sin Lote' ? 'rgba(107,114,128,0.1)' : 'rgba(52,211,153,0.12)';
+                actionsHtml += `<select class="pt-batch-select" data-id="${t.id}" title="Asignar lote" style="font-size:11px;padding:3px 8px;height:28px;background:${batchBg};border:1px solid ${batchColor}33;color:${batchColor};border-radius:5px;cursor:pointer;font-weight:600;">`;
+                BATCH_OPTIONS.forEach(opt => {
+                    actionsHtml += `<option value="${opt === 'Sin Lote' ? '' : opt}" ${(t.batch_label || '') === (opt === 'Sin Lote' ? '' : opt) ? 'selected' : ''}>${opt}</option>`;
+                });
+                actionsHtml += `</select>`;
+            }
+            if (canEdit) actionsHtml += `<button class="btn-icon" onclick="PendingTeachers.editTeacher(${t.id})" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>`;
+            if (canManage) actionsHtml += `<button class="btn-icon" onclick="PendingTeachers.deleteTeacher(${t.id})" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`;
+            actionsHtml += `</div>`;
             }
             const alarmIndicator = status === 'guion_incompleto' ? `<span class="pt-alarm-indicator" title="Falta información para agendar"><span class="pt-alarm-dot"></span></span>` : '';
             return `<div class="${cardClass}" data-id="${t.id}">
@@ -322,13 +339,36 @@ const PendingTeachers = {
             </div>`;
         }; // end buildCard
 
-        // ── When "Filmación Terminada": one flat group, no agenda sub-grouping ──
+        // ── When "Filmación Terminada": group by batch (lote) with collapsible headers ──
         if (this.activeFilter === 'terminados') {
-            html += `<div class="pending-group-header" style="color:#34d399;border-color:rgba(52,211,153,0.3);">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px; vertical-align:-2px;"><rect width="20" height="20" x="2" y="2" rx="2.18" ry="2.18"/><line x1="7" x2="7" y1="2" y2="22"/><line x1="17" x2="17" y1="2" y2="22"/><line x1="2" x2="22" y1="12" y2="12"/><line x1="2" x2="7" y1="7" y2="7"/><line x1="2" x2="7" y1="17" y2="17"/><line x1="17" x2="22" y1="17" y2="17"/><line x1="17" x2="22" y1="7" y2="7"/></svg> Filmación Terminada <span>${teachers.length}</span>
-            </div>`;
+            const BATCH_ORDER = ['LOTE 1', 'LOTE 2', 'LOTE 3', 'LOTE 4', ''];
+            const batches = {};
             for (const t of teachers) {
-                html += buildCard(t);
+                const key = t.batch_label || '';
+                if (!batches[key]) batches[key] = [];
+                batches[key].push(t);
+            }
+            for (const batchKey of BATCH_ORDER) {
+                if (!batches[batchKey] || batches[batchKey].length === 0) continue;
+                const label = batchKey || 'Sin Lote';
+                const isCollapsed = !!this.batchCollapsed[batchKey || '__sin_lote'];
+                const colKey = batchKey || '__sin_lote';
+                const isBatch = !!batchKey;
+                const headerColor = isBatch ? '#34d399' : '#9ca3af';
+                const headerBorderColor = isBatch ? 'rgba(52,211,153,0.3)' : 'rgba(156,163,175,0.2)';
+                const filmIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:-2px;"><rect width="20" height="20" x="2" y="2" rx="2.18" ry="2.18"/><line x1="7" x2="7" y1="2" y2="22"/><line x1="17" x2="17" y1="2" y2="22"/><line x1="2" x2="22" y1="12" y2="12"/><line x1="2" x2="7" y1="7" y2="7"/><line x1="2" x2="7" y1="17" y2="17"/><line x1="17" x2="22" y1="17" y2="17"/><line x1="17" x2="22" y1="7" y2="7"/></svg>`;
+                const chevron = isCollapsed
+                    ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>`
+                    : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>`;
+                html += `<div class="pending-group-header pt-batch-header" data-batch-key="${colKey}" style="color:${headerColor};border-color:${headerBorderColor};cursor:pointer;user-select:none;justify-content:space-between;">
+                    <span style="display:flex;align-items:center;gap:6px;">${filmIcon}${label} <span>${batches[batchKey].length}</span></span>
+                    <span class="pt-batch-chevron" style="opacity:0.7;display:flex;align-items:center;">${chevron}</span>
+                </div>`;
+                if (!isCollapsed) {
+                    for (const t of batches[batchKey]) {
+                        html += buildCard(t);
+                    }
+                }
             }
         } else {
             // ── Normal: group cards by their agenda status ───────────────────
@@ -352,6 +392,25 @@ const PendingTeachers = {
         }
 
         list.innerHTML = html;
+
+        // Bind collapsible batch headers
+        list.querySelectorAll('.pt-batch-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const key = header.dataset.batchKey;
+                this.batchCollapsed[key] = !this.batchCollapsed[key];
+                this.saveBatchCollapsed();
+                this.render();
+            });
+        });
+
+        // Bind batch selectors
+        list.querySelectorAll('.pt-batch-select').forEach(sel => {
+            sel.addEventListener('change', async (e) => {
+                const id = +sel.dataset.id;
+                const batch_label = e.target.value || null;
+                await this.assignBatch(id, batch_label);
+            });
+        });
 
         // Bind status select change handlers
         list.querySelectorAll('.pt-status-select').forEach(sel => {
@@ -449,6 +508,15 @@ const PendingTeachers = {
             showToast('Pasaje eliminado', 'success');
             this.refresh();
         });
+    },
+
+    async assignBatch(id, batch_label) {
+        await API.put(`/pending-teachers/${id}`, { batch_label });
+        const t = this.teachers.find(x => x.id === id);
+        if (t) t.batch_label = batch_label;
+        const label = batch_label || 'Sin Lote';
+        showToast(`${t?.name || 'Docente'} → ${label}`, 'success');
+        this.render(); // re-render without full refresh to keep position
     },
 
     async changeStatus(id, newStatus) {
