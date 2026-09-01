@@ -621,6 +621,7 @@ const PendingTeachers = {
         document.getElementById('input-pt-subject-type').value = 'Teórica';
         document.getElementById('input-pt-phone').value = '';
         document.getElementById('input-pt-sede').value = 'La Paz';
+        document.getElementById('input-pt-batch').value = '';
         document.getElementById('input-pt-drive').value = '';
         document.getElementById('input-pt-notes').value = '';
         document.getElementById('input-pt-flight-ticket').value = '';
@@ -642,6 +643,7 @@ const PendingTeachers = {
         document.getElementById('input-pt-subject-type').value = t.subject_type || 'Teórica';
         document.getElementById('input-pt-phone').value = t.phone || '';
         document.getElementById('input-pt-sede').value = t.sede || 'La Paz';
+        document.getElementById('input-pt-batch').value = t.batch_label || '';
         document.getElementById('input-pt-drive').value = t.drive_link || '';
         document.getElementById('input-pt-notes').value = t.notes || '';
         document.getElementById('input-pt-flight-ticket').value = '';
@@ -666,6 +668,7 @@ const PendingTeachers = {
         const phone = document.getElementById('input-pt-phone').value.trim();
         const sede = document.getElementById('input-pt-sede').value;
         const is_external = (sede !== 'La Paz' && sede !== 'El Alto');
+        const batch_label = document.getElementById('input-pt-batch').value || null;
         const drive_link = document.getElementById('input-pt-drive').value.trim();
         const notes = document.getElementById('input-pt-notes').value.trim();
 
@@ -691,7 +694,7 @@ const PendingTeachers = {
             flight_ticket_path = uploadRes.path;
         }
 
-        const data = { name, subject, subject_code, subject_type, phone, sede, is_external, drive_link, flight_ticket_path, notes };
+        const data = { name, subject, subject_code, subject_type, phone, sede, is_external, batch_label, drive_link, flight_ticket_path, notes };
 
         if (this.editingId) {
             await API.put(`/pending-teachers/${this.editingId}`, data);
