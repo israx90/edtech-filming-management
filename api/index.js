@@ -252,11 +252,25 @@ app.get('/api/dashboard', asyncHandler(async (req, res) => {
 
   const today = new Date().toISOString().split('T')[0];
   const nextSession = await queryOne(
-    "SELECT rs.*, fa.teacher_name, fa.phone, s.code as subject_code, s.name as subject_name FROM recording_sessions rs JOIN filming_assignments fa ON fa.id = rs.assignment_id JOIN subjects s ON s.id = fa.subject_id WHERE rs.session_date >= ? AND fa.status != 'cancelled' ORDER BY rs.session_date ASC, rs.start_time ASC LIMIT 1",
+    `SELECT rs.*, COALESCE(fa.teacher_name, 'Docente') as teacher_name, fa.phone, 
+            COALESCE(s.code, (SELECT pt.subject_code FROM pending_teachers pt WHERE LOWER(TRIM(pt.name)) = LOWER(TRIM(fa.teacher_name)) AND pt.subject_code IS NOT NULL AND pt.subject_code != '' LIMIT 1), '') as subject_code, 
+            COALESCE(s.name, (SELECT pt.subject FROM pending_teachers pt WHERE LOWER(TRIM(pt.name)) = LOWER(TRIM(fa.teacher_name)) AND pt.subject IS NOT NULL AND pt.subject != '' LIMIT 1), 'Filmación de Docente') as subject_name 
+     FROM recording_sessions rs 
+     LEFT JOIN filming_assignments fa ON fa.id = rs.assignment_id 
+     LEFT JOIN subjects s ON s.id = fa.subject_id 
+     WHERE rs.session_date >= ? AND (rs.status IS NULL OR rs.status != 'cancelled') 
+     ORDER BY rs.session_date ASC, rs.start_time ASC LIMIT 1`,
     [today]
   );
   const recentSessions = await queryAll(
-    "SELECT rs.*, fa.teacher_name, s.code as subject_code, s.name as subject_name, fa.status as assignment_status FROM recording_sessions rs JOIN filming_assignments fa ON fa.id = rs.assignment_id JOIN subjects s ON s.id = fa.subject_id JOIN semesters sem ON sem.id = s.semester_id AND sem.is_active = true ORDER BY rs.session_date DESC LIMIT 5"
+    `SELECT rs.*, COALESCE(fa.teacher_name, 'Docente') as teacher_name, 
+            COALESCE(s.code, (SELECT pt.subject_code FROM pending_teachers pt WHERE LOWER(TRIM(pt.name)) = LOWER(TRIM(fa.teacher_name)) AND pt.subject_code IS NOT NULL AND pt.subject_code != '' LIMIT 1), '') as subject_code, 
+            COALESCE(s.name, (SELECT pt.subject FROM pending_teachers pt WHERE LOWER(TRIM(pt.name)) = LOWER(TRIM(fa.teacher_name)) AND pt.subject IS NOT NULL AND pt.subject != '' LIMIT 1), 'Filmación de Docente') as subject_name, 
+            fa.status as assignment_status 
+     FROM recording_sessions rs 
+     LEFT JOIN filming_assignments fa ON fa.id = rs.assignment_id 
+     LEFT JOIN subjects s ON s.id = fa.subject_id 
+     ORDER BY rs.session_date DESC LIMIT 5`
   );
   const inProgressList = await queryAll(
     "SELECT fa.*, s.code as subject_code, s.name as subject_name FROM filming_assignments fa JOIN subjects s ON s.id = fa.subject_id WHERE s.semester_id = ? AND fa.status = 'in_progress' ORDER BY fa.created_at DESC",
@@ -448,7 +462,14 @@ app.post('/api/subjects/deduplicate', asyncHandler(async (req, res) => {
 app.get('/api/assignments', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
   if (!requireAuth(user, res)) return;
-  res.json(await queryAll("SELECT fa.*, s.code as subject_code, s.name as subject_name FROM filming_assignments fa JOIN subjects s ON s.id = fa.subject_id JOIN semesters sem ON sem.id = s.semester_id AND sem.is_active = true ORDER BY fa.created_at DESC"));
+  res.json(await queryAll(`
+    SELECT fa.*, 
+      COALESCE(s.code, (SELECT pt.subject_code FROM pending_teachers pt WHERE LOWER(TRIM(pt.name)) = LOWER(TRIM(fa.teacher_name)) AND pt.subject_code IS NOT NULL AND pt.subject_code != '' LIMIT 1), '') as subject_code, 
+      COALESCE(s.name, (SELECT pt.subject FROM pending_teachers pt WHERE LOWER(TRIM(pt.name)) = LOWER(TRIM(fa.teacher_name)) AND pt.subject IS NOT NULL AND pt.subject != '' LIMIT 1), 'Filmación de Docente') as subject_name 
+    FROM filming_assignments fa 
+    LEFT JOIN subjects s ON s.id = fa.subject_id 
+    ORDER BY fa.created_at DESC
+  `));
 }));
 app.post('/api/assignments', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
@@ -479,7 +500,14 @@ app.get('/api/assignments/:id', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
   if (!requireAuth(user, res)) return;
   const id = parseInt(req.params.id);
-  const a = await queryOne('SELECT fa.*, s.code as subject_code, s.name as subject_name FROM filming_assignments fa JOIN subjects s ON s.id = fa.subject_id WHERE fa.id = ?', [id]);
+  const a = await queryOne(`
+    SELECT fa.*, 
+      COALESCE(s.code, (SELECT pt.subject_code FROM pending_teachers pt WHERE LOWER(TRIM(pt.name)) = LOWER(TRIM(fa.teacher_name)) AND pt.subject_code IS NOT NULL AND pt.subject_code != '' LIMIT 1), '') as subject_code, 
+      COALESCE(s.name, (SELECT pt.subject FROM pending_teachers pt WHERE LOWER(TRIM(pt.name)) = LOWER(TRIM(fa.teacher_name)) AND pt.subject IS NOT NULL AND pt.subject != '' LIMIT 1), 'Filmación de Docente') as subject_name 
+    FROM filming_assignments fa 
+    LEFT JOIN subjects s ON s.id = fa.subject_id 
+    WHERE fa.id = ?
+  `, [id]);
   if (!a) return res.status(404).json({ error: 'No encontrada' });
   a.sessions = await queryAll('SELECT rs.*, u1.name as staff_1_name, u2.name as staff_2_name, u3.name as staff_3_name, u4.name as staff_4_name FROM recording_sessions rs LEFT JOIN users u1 ON rs.staff_1_id = u1.id LEFT JOIN users u2 ON rs.staff_2_id = u2.id LEFT JOIN users u3 ON rs.staff_3_id = u3.id LEFT JOIN users u4 ON rs.staff_4_id = u4.id WHERE rs.assignment_id = ? ORDER BY rs.session_date ASC', [id]);
   res.json(a);
@@ -506,15 +534,28 @@ app.put('/api/assignments/:id', asyncHandler(async (req, res) => {
       if (a) await execute('UPDATE subjects SET completed = true WHERE id = ?', [a.subject_id]);
     }
   }
-  const updated = await queryOne('SELECT fa.*, s.code as subject_code, s.name as subject_name FROM filming_assignments fa JOIN subjects s ON s.id = fa.subject_id WHERE fa.id = ?', [id]);
-  if (status !== undefined || teacher_name !== undefined) await logAction(user, status ? `Marcó filmación como: ${status}` : `Editó filmación: ${updated.subject_code}`, 'assignment', id, updated.teacher_name);
+  const updated = await queryOne(`
+    SELECT fa.*, 
+      COALESCE(s.code, (SELECT pt.subject_code FROM pending_teachers pt WHERE LOWER(TRIM(pt.name)) = LOWER(TRIM(fa.teacher_name)) AND pt.subject_code IS NOT NULL AND pt.subject_code != '' LIMIT 1), '') as subject_code, 
+      COALESCE(s.name, (SELECT pt.subject FROM pending_teachers pt WHERE LOWER(TRIM(pt.name)) = LOWER(TRIM(fa.teacher_name)) AND pt.subject IS NOT NULL AND pt.subject != '' LIMIT 1), 'Filmación de Docente') as subject_name 
+    FROM filming_assignments fa 
+    LEFT JOIN subjects s ON s.id = fa.subject_id 
+    WHERE fa.id = ?
+  `, [id]);
+  if (status !== undefined || teacher_name !== undefined) await logAction(user, status ? `Marcó filmación como: ${status}` : `Editó filmación: ${updated?.subject_code || ''}`, 'assignment', id, updated?.teacher_name);
   res.json(updated);
 }));
 app.delete('/api/assignments/:id', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
   if (!requireAuth(user, res)) return;
   const id = parseInt(req.params.id);
-  const fa = await queryOne('SELECT fa.*, s.code as subject_code FROM filming_assignments fa JOIN subjects s ON s.id = fa.subject_id WHERE fa.id = ?', [id]);
+  const fa = await queryOne(`
+    SELECT fa.*, 
+      COALESCE(s.code, (SELECT pt.subject_code FROM pending_teachers pt WHERE LOWER(TRIM(pt.name)) = LOWER(TRIM(fa.teacher_name)) AND pt.subject_code IS NOT NULL AND pt.subject_code != '' LIMIT 1), '') as subject_code 
+    FROM filming_assignments fa 
+    LEFT JOIN subjects s ON s.id = fa.subject_id 
+    WHERE fa.id = ?
+  `, [id]);
   if (fa) await logAction(user, `Eliminó filmación: ${fa.subject_code} (${fa.teacher_name})`, 'assignment', id);
   await execute('DELETE FROM filming_assignments WHERE id = ?', [id]);
   res.json({ success: true });
@@ -525,7 +566,34 @@ app.get('/api/sessions', asyncHandler(async (req, res) => {
   const user = await getAuthUser(req);
   if (!requireAuth(user, res)) return;
   const { month, year } = req.query;
-  let q = "SELECT rs.*, fa.teacher_name, fa.phone, fa.subject_id, fa.drive_link, fa.script_status, fa.status as assignment_status, fa.id as assignment_id, fa.sede, s.code as subject_code, s.name as subject_name, s.subject_type, (SELECT gs.career FROM global_subjects gs WHERE gs.code = s.code LIMIT 1) AS career, u1.name as staff_1_name, u2.name as staff_2_name, u3.name as staff_3_name, u4.name as staff_4_name FROM recording_sessions rs JOIN filming_assignments fa ON fa.id = rs.assignment_id JOIN subjects s ON s.id = fa.subject_id JOIN semesters sem ON sem.id = s.semester_id AND sem.is_active = true LEFT JOIN users u1 ON rs.staff_1_id = u1.id LEFT JOIN users u2 ON rs.staff_2_id = u2.id LEFT JOIN users u3 ON rs.staff_3_id = u3.id LEFT JOIN users u4 ON rs.staff_4_id = u4.id";
+  let q = `
+    SELECT 
+      rs.*, 
+      COALESCE(fa.teacher_name, 'Docente') as teacher_name, 
+      fa.phone, 
+      fa.subject_id, 
+      fa.drive_link, 
+      fa.script_status, 
+      fa.status as assignment_status, 
+      fa.id as assignment_id, 
+      COALESCE(fa.sede, 'La Paz') as sede, 
+      COALESCE(s.code, (SELECT pt.subject_code FROM pending_teachers pt WHERE LOWER(TRIM(pt.name)) = LOWER(TRIM(fa.teacher_name)) AND pt.subject_code IS NOT NULL AND pt.subject_code != '' LIMIT 1), '') as subject_code, 
+      COALESCE(s.name, (SELECT pt.subject FROM pending_teachers pt WHERE LOWER(TRIM(pt.name)) = LOWER(TRIM(fa.teacher_name)) AND pt.subject IS NOT NULL AND pt.subject != '' LIMIT 1), 'Filmación de Docente') as subject_name, 
+      COALESCE(s.subject_type, 'Teórica') as subject_type, 
+      COALESCE((SELECT gs.career FROM global_subjects gs WHERE gs.code = COALESCE(s.code, (SELECT pt2.subject_code FROM pending_teachers pt2 WHERE LOWER(TRIM(pt2.name)) = LOWER(TRIM(fa.teacher_name)) LIMIT 1)) LIMIT 1), '') AS career, 
+      u1.name as staff_1_name, 
+      u2.name as staff_2_name, 
+      u3.name as staff_3_name, 
+      u4.name as staff_4_name 
+    FROM recording_sessions rs 
+    LEFT JOIN filming_assignments fa ON fa.id = rs.assignment_id 
+    LEFT JOIN subjects s ON s.id = fa.subject_id 
+    LEFT JOIN semesters sem ON sem.id = s.semester_id 
+    LEFT JOIN users u1 ON rs.staff_1_id = u1.id 
+    LEFT JOIN users u2 ON rs.staff_2_id = u2.id 
+    LEFT JOIN users u3 ON rs.staff_3_id = u3.id 
+    LEFT JOIN users u4 ON rs.staff_4_id = u4.id
+  `;
   const params = [];
   if (month && year) {
     q += " WHERE EXTRACT(YEAR FROM rs.session_date) = ? AND EXTRACT(MONTH FROM rs.session_date) = ?";
@@ -572,10 +640,10 @@ app.post('/api/sessions', asyncHandler(async (req, res) => {
   // Check conflicts with other sessions
   let conflictMsg = null;
   const sConflict = await queryOne(
-    `SELECT rs.id, fa.teacher_name, sub.code as subject_code, rs.start_time, rs.end_time 
+    `SELECT rs.id, fa.teacher_name, COALESCE(sub.code, '') as subject_code, rs.start_time, rs.end_time 
      FROM recording_sessions rs 
      JOIN filming_assignments fa ON rs.assignment_id = fa.id 
-     JOIN subjects sub ON fa.subject_id = sub.id 
+     LEFT JOIN subjects sub ON fa.subject_id = sub.id 
      WHERE rs.session_date = ? AND rs.status != 'cancelled' 
      AND ((? >= rs.start_time AND ? < rs.end_time) OR (? > rs.start_time AND ? <= rs.end_time) OR (? <= rs.start_time AND ? >= rs.end_time))`,
     [session_date, start_time, start_time, end_time, end_time, start_time, end_time]
@@ -628,10 +696,10 @@ app.put('/api/sessions/:id', asyncHandler(async (req, res) => {
       
       let conflictMsg = null;
       const sConflict = await queryOne(
-        `SELECT rs.id, fa.teacher_name, sub.code as subject_code, rs.start_time, rs.end_time 
+        `SELECT rs.id, fa.teacher_name, COALESCE(sub.code, '') as subject_code, rs.start_time, rs.end_time 
          FROM recording_sessions rs 
          JOIN filming_assignments fa ON rs.assignment_id = fa.id 
-         JOIN subjects sub ON fa.subject_id = sub.id 
+         LEFT JOIN subjects sub ON fa.subject_id = sub.id 
          WHERE rs.session_date = ? AND rs.status != 'cancelled' AND rs.id != ?
          AND ((? >= rs.start_time AND ? < rs.end_time) OR (? > rs.start_time AND ? <= rs.end_time) OR (? <= rs.start_time AND ? >= rs.end_time))`,
         [session_date, id, start_time, start_time, end_time, end_time, start_time, end_time]
@@ -670,7 +738,7 @@ app.put('/api/sessions/:id', asyncHandler(async (req, res) => {
   if (body.status !== undefined) {
     await execute('UPDATE recording_sessions SET status = ? WHERE id = ?', [body.status, id]);
     if (body.status === 'cancelled') {
-      const sInfo = await queryOne('SELECT rs.session_date, rs.start_time, rs.end_time, rs.assignment_id, fa.teacher_name, sub.code FROM recording_sessions rs JOIN filming_assignments fa ON fa.id = rs.assignment_id JOIN subjects sub ON sub.id = fa.subject_id WHERE rs.id = ?', [id]);
+      const sInfo = await queryOne('SELECT rs.session_date, rs.start_time, rs.end_time, rs.assignment_id, fa.teacher_name, COALESCE(sub.code, "") as code FROM recording_sessions rs JOIN filming_assignments fa ON fa.id = rs.assignment_id LEFT JOIN subjects sub ON sub.id = fa.subject_id WHERE rs.id = ?', [id]);
       if (sInfo) {
         const cancelMsg = `[${sInfo.session_date} ${sInfo.start_time?.substring(0,5)}-${sInfo.end_time?.substring(0,5)}] Sesión CANCELADA — Docente no se presentó.`;
         const fa = await queryOne('SELECT bitacora FROM filming_assignments WHERE id = ?', [sInfo.assignment_id]);

@@ -227,15 +227,15 @@ const Calendar = {
             ev.innerHTML = `
                 <div class="cal-event-header">
                     <span class="cal-event-time">${t1} - ${t2} ${fullDayBadge}${cancelledBadge}${displacementBadge}</span>
-                    <span class="cal-event-code">${session.subject_code}</span>
+                    <span class="cal-event-code">${session.subject_code || ''}</span>
                 </div>
                 <div class="cal-event-subject" style="${isCancelled ? 'text-decoration:line-through;opacity:0.6;' : ''}">
-                    ${session.subject_name} ${typeTag}
+                    ${session.subject_name || 'Filmación'} ${typeTag}
                     ${isAcademy ? `<span style="display:inline-block;background:var(--cyan-bg);color:var(--cyan);font-size:9px;padding:1px 6px;border-radius:3px;font-weight:700;margin-top:2px;border:1px solid rgba(34,211,238,0.35);">&#127891; ACADEMY</span>` : ''}
                 </div>
-                <div class="cal-event-teacher">${externalBadge}${session.teacher_name}</div>
+                <div class="cal-event-teacher">${externalBadge}${session.teacher_name || 'Docente'}</div>
             `;
-            ev.title = `${isCancelled ? 'CANCELADO — ' : ''}${session.teacher_name}${isExternal ? ` (${session.sede})` : ''} — ${session.subject_name}\n${session.start_time} - ${session.end_time}`;
+            ev.title = `${isCancelled ? 'CANCELADO — ' : ''}${session.teacher_name || 'Docente'}${isExternal ? ` (${session.sede})` : ''} — ${session.subject_name || 'Filmación'}\n${session.start_time} - ${session.end_time}`;
 
             if (App.user && session.assignment_id) {
                 ev.style.cursor = 'pointer';
@@ -584,13 +584,13 @@ const Calendar = {
     async confirmDeleteSession(session) {
         this.showConfirm({
             title: 'Eliminar sesión',
-            message: `¿Eliminar la sesión de ${session.teacher_name} (${session.subject_code}) del ${session.session_date}?`
+            message: `¿Eliminar la sesión de ${session.teacher_name || 'Docente'} (${session.subject_code || 'Filmación'}) del ${session.session_date}?`
         }, async () => {
             // Save for undo
             const backup = { ...session };
             await API.del(`/sessions/${session.id}`);
             this.undoStack.push({
-                label: `Sesión de ${session.subject_code}`,
+                label: `Sesión de ${session.subject_code || session.teacher_name || 'Filmación'}`,
                 undo: async () => {
                     await API.post('/sessions', {
                         assignment_id: backup.assignment_id,
